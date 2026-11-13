@@ -1,23 +1,24 @@
 # Shop AI assistant — STAGING on the shared staging k3s VPS (same cluster as gvs-staging, separate namespace,
 # nothing shared with GVS). Public URL: https://ai.square.al
 #
-# Deploy with k8s/deploy-staging.sh (it substitutes __IMAGE_TAG__, creates the Secret, applies this file).
-# Do not `kubectl apply -f` this file by hand: the image tag placeholder below is not a real tag.
+# Deploy with k8s/deploy-staging.sh (it substitutes __IMAGE_TAG__ and __OPENWA_TAG__, creates the Secret, applies this file).
+# Do not `kubectl apply -f` this file by hand: the image tag placeholders below are not real tags.
 #
 # The shop-ai-env Secret is NOT kept in git. It is created from k8s/.env.staging (gitignored; template:
 # k8s/staging.env.example) by the deploy script:
 #   kubectl -n shop-ai-staging create secret generic shop-ai-env --from-env-file=... --dry-run=client -o yaml \
 #     | kubectl apply -f -
 #
-# WhatsApp (OpenWA) is intentionally NOT deployed on staging (like GVS staging): OPENWA_URL stays empty, so no
-# session can be paired and nothing reaches real customers. To add it later:
-#   1. build docker/openwa (see docker-compose.yml) for linux/amd64 and push it as
-#      localhost:5000/shop-ai/openwa:<tag> through the same tunnel as the app image;
-#   2. add a StatefulSet `openwa` here (1 replica, PVC ~2Gi mounted at /app/data, the env block of the
-#      compose service, a 1Gi emptyDir with medium: Memory mounted at /dev/shm, memory request 1Gi / limit 2Gi:
-#      check free RAM/disk on the shared VPS first) plus a ClusterIP Service on port 2785;
-#   3. set OPENWA_URL=http://openwa:2785 and OPENWA_WEBHOOK_URL=http://app/api/webhooks/openwa in .env.staging,
-#      and OPENWA_API_KEY from `kubectl exec openwa-0 -- cat /app/data/.api-key` after the first boot.
+# WhatsApp (OpenWA gateway, StatefulSet `openwa` below) runs in-cluster, internal only (ClusterIP, no Ingress):
+#   app -> http://openwa:2785 (OPENWA_URL), gateway -> http://app.shop-ai-staging.svc.cluster.local/api/webhooks/openwa
+#   (OPENWA_WEBHOOK_URL; must be a dotted host: the gateway's @IsUrl() rejects a bare `http://app/...`).
+# Image localhost:5000/shop-ai/openwa:__OPENWA_TAG__ (fixed tag = pinned OpenWA commit, see docker/openwa/Dockerfile),
+# pushed by deploy-staging.sh unless --skip-openwa. The gateway generates its API key on first boot into
+# /app/data/.api-key (no env can fix it): after the first deploy copy it into k8s/.env.staging as OPENWA_API_KEY
+#   ssh <vps> sudo -n kubectl -n shop-ai-staging exec openwa-0 -- cat /app/data/.api-key
+# and re-run deploy-staging.sh --skip-openwa. A wiped PVC = new key + new QR scan.
+# Pair a DEDICATED staging WhatsApp number (Channels page -> Lidh WhatsApp (OpenWA) -> QR), never SunEasy's or GVS's.
+# Memory: request 1Gi / limit 2Gi (Chromium) on a shared VPS: check free RAM/disk before the first rollout.
 ---
 apiVersion: v1
 kind: Namespace
@@ -208,3 +209,143 @@ spec:
                 name: app
                 port:
                   number: 80
+
+---
+# ─── OpenWA (unofficial WhatsApp gateway: whatsapp-web.js + Chromium, port 2785) ─
+# Spec mirrors SunEasy's production gateway (k8s/services/backend/whatsapp.yaml) and docker-compose.yml.
+# MUST stay at 1 replica: a WhatsApp Web session is bound to one Chromium profile on the PVC.
+apiVersion: v1
+kind: Service
+metadata:
+  name: openwa
+  namespace: shop-ai-staging
+spec:
+  type: ClusterIP
+  selector:
+    app: openwa
+  ports:
+    - name: http
+      port: 2785
+      targetPort: 2785
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openwa
+  namespace: shop-ai-staging
+spec:
+  serviceName: openwa
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openwa
+  template:
+    metadata:
+      labels:
+        app: openwa
+    spec:
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        # The image runs as root (no USER); fsGroup 0 keeps the PVC writable.
+        fsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: openwa
+          image: localhost:5000/shop-ai/openwa:__OPENWA_TAG__
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              # Chromium adjusts each renderer's OOM score; without it: "Failed to adjust OOM score" and no session.
+              add: [SYS_RESOURCE]
+          ports:
+            - name: http
+              containerPort: 2785
+          env:
+            # production => random API key written to /app/data/.api-key on first boot (API_MASTER_KEY is ignored)
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "2785"
+            - name: LOG_LEVEL
+              value: info
+            - name: ENGINE_TYPE
+              value: whatsapp-web.js
+            - name: SESSION_DATA_PATH
+              value: /app/data/sessions
+            - name: PUPPETEER_HEADLESS
+              value: "true"
+            - name: PUPPETEER_ARGS
+              value: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+            - name: STORAGE_TYPE
+              value: local
+            - name: STORAGE_LOCAL_PATH
+              value: /app/data/media
+            - name: DATABASE_TYPE
+              value: sqlite
+            - name: DATABASE_NAME
+              value: /app/data/openwa.sqlite
+            - name: DATABASE_SYNCHRONIZE
+              value: "true"
+            - name: WEBHOOK_TIMEOUT
+              value: "10000"
+            - name: WEBHOOK_MAX_RETRIES
+              value: "3"
+            - name: WEBHOOK_RETRY_DELAY
+              value: "5000"
+            - name: PLUGINS_ENABLED
+              value: "false"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data # sessions, SQLite (webhooks, API key hash), .api-key, media
+            - name: dshm
+              mountPath: /dev/shm
+          # /api/health is always 200 while the process is up (even with a dead WhatsApp session): it only
+          # proves the HTTP server lives. Session health is the app's channel monitor (src/lib/channels/monitor.ts).
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 2785
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 2785
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 2785
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              # Chromium steadily uses ~800Mi; less headroom made SunEasy's gateway drop in-flight sends.
+              memory: 1Gi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+              cpu: 1500m
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory # the 64Mi default /dev/shm crashes Chromium
+            sizeLimit: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 2Gi
