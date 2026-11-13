@@ -34,9 +34,6 @@ WORKDIR /migrate
 RUN echo '{"name":"migrate","private":true}' > package.json \
  && npm install --omit=dev --no-audit --no-fund --no-package-lock prisma@7.10.1 dotenv@18.0.10 \
  && npm cache clean --force
-COPY prisma.config.ts ./
-COPY prisma/schema.prisma ./prisma/schema.prisma
-COPY prisma/migrations ./prisma/migrations
 
 # ─── runner ───────────────────────────────────────────────────────────────────
 FROM base AS runner
@@ -44,7 +41,11 @@ ENV NODE_ENV=production \
     PORT=4710 \
     HOSTNAME=0.0.0.0
 WORKDIR /app
+# Prisma CLI (~230 MB) as its own layer: unchanged between deploys, so the registry push skips it.
 COPY --from=migrate /migrate /migrate
+COPY prisma.config.ts /migrate/
+COPY prisma/schema.prisma /migrate/prisma/schema.prisma
+COPY prisma/migrations /migrate/prisma/migrations
 COPY --from=builder --chown=node:node /src/.next/standalone ./
 COPY --from=builder --chown=node:node /src/.next/static ./.next/static
 COPY --from=builder --chown=node:node /src/public ./public

@@ -95,7 +95,7 @@ DRY RUN: nothing is built, pushed or applied. Steps a real run would perform:
            (wait for http://localhost:${TUNNEL_PORT}/v2/, closed again on exit)
 3. push    docker push ${PUSH_IMAGE}
 4. ns      ssh ${SSH_TARGET} sudo -n kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | sudo -n kubectl apply -f -
-5. secret  ssh ${SSH_TARGET} "sudo -n kubectl -n ${NAMESPACE} create secret generic ${SECRET} --from-env-file=/dev/stdin \\
+5. secret  ssh ${SSH_TARGET} "cat | sudo -n kubectl -n ${NAMESPACE} create secret generic ${SECRET} --from-env-file=/dev/stdin \\
              --dry-run=client -o yaml | sudo -n kubectl apply -f -" < k8s/.env.staging
            (values travel over ssh stdin only; nothing is written to the VPS disk)
 6. apply   sed 's/__IMAGE_TAG__/${TAG}/' k8s/staging.yaml | ssh ${SSH_TARGET} sudo -n kubectl apply -f -
@@ -133,7 +133,8 @@ step "namespace ${NAMESPACE}"
 remote "sudo -n kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | sudo -n kubectl apply -f -"
 
 step "secret ${SECRET} from k8s/.env.staging (via ssh stdin)"
-remote "sudo -n kubectl -n ${NAMESPACE} create secret generic ${SECRET} --from-env-file=/dev/stdin \
+# `cat |` makes kubectl's stdin a pipe: sshd may hand the remote command a socket, which /dev/stdin cannot open.
+remote "cat | sudo -n kubectl -n ${NAMESPACE} create secret generic ${SECRET} --from-env-file=/dev/stdin \
   --dry-run=client -o yaml | sudo -n kubectl apply -f -" < "$ENV_FILE"
 
 # ─── 6-9. Manifest, postgres, image, rollout ──────────────────────────────────
