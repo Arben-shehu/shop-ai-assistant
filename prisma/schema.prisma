@@ -106,6 +106,7 @@ model Organization {
   tickets       HelpTicket[]
   notifications Notification[]
   activityLogs  ActivityLog[]
+  inventorySource InventorySource?
 
   @@unique([slug])
   @@map("organization")
@@ -150,6 +151,7 @@ enum ChannelType {
   WHATSAPP_OPENWA // unofficial gateway (OpenWA), externalId = OpenWA session id
   WHATSAPP_META // official Cloud API, externalId = phone_number_id
   INSTAGRAM // Meta Instagram API, externalId = IG account id
+  WEB // chat widget embedded on the shop's site, externalId = public widget key
 }
 
 enum ChannelStatus {
@@ -262,6 +264,29 @@ model Message {
   @@unique([conversationId, externalId])
   @@index([conversationId, createdAt])
   @@index([status, nextAttemptAt])
+}
+
+enum InventoryDialect {
+  POSTGRES
+  MYSQL
+  MSSQL
+}
+
+// Shop's own database, read live (read-only) by the AI search. Configured by platform admins only:
+// the server can reach internal hosts, so a shop must never choose the host.
+model InventorySource {
+  id             String           @id @default(cuid())
+  organizationId String           @unique
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dialect        InventoryDialect
+  url            String // AES-256-GCM encrypted connection string
+  query          String // admin-written SELECT returning sku, name, price, stock (+ optional columns)
+  columns        String[] // column names the query returned at the last successful test
+  isActive       Boolean          @default(true)
+  lastError      String?
+  lastCheckedAt  DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model Product {
