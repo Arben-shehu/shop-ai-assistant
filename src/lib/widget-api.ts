@@ -13,7 +13,7 @@ import { WIDGET_KEY_RE, webAllowedOrigins } from "@/lib/channels/web";
  * page, non-browser clients) are served: CORS cannot stop non-browser clients anyway, the abuse limits below do.
  */
 
-export type WidgetChannel = { id: string; organizationId: string; shopName: string; origins: string[] };
+export type WidgetChannel = { id: string; organizationId: string; shopName: string; origins: string[]; active: boolean };
 
 const appOrigin = () => {
   try {
@@ -39,10 +39,9 @@ export async function findWidgetChannel(key: string): Promise<WidgetChannel | nu
     where: { type_externalId: { type: "WEB", externalId: key } },
     select: { id: true, organizationId: true, isActive: true, credentials: true, organization: { select: { name: true } } },
   });
-  const channel =
-    row && row.isActive
-      ? { id: row.id, organizationId: row.organizationId, shopName: row.organization.name, origins: webAllowedOrigins(row) }
-      : null;
+  const channel = row
+    ? { id: row.id, organizationId: row.organizationId, shopName: row.organization.name, origins: webAllowedOrigins(row), active: row.isActive }
+    : null;
   if (channelCache.size > 5_000) channelCache.clear();
   channelCache.set(key, { at: Date.now(), channel });
   return channel;
@@ -71,8 +70,8 @@ export const forbidden = () =>
   NextResponse.json({ error: "origin_not_allowed" }, { status: 403, headers: { Vary: "Origin", "Cache-Control": "no-store" } });
 
 /**
- * Resolves the channel and applies the CORS rule. Unknown/inactive key: 404 (with CORS headers when the origin
- * cannot be checked, so the widget can read the status and hide itself).
+ * Resolves the channel and applies the CORS rule. Unknown key: 404. Deactivated channel: 404 with CORS headers for
+ * allowed origins, so the widget on the shop's site can read the status and show "unavailable".
  */
 export async function widgetContext(
   req: NextRequest,
@@ -82,6 +81,7 @@ export async function widgetContext(
   if (!channel) return { ok: false, res: NextResponse.json({ error: "not_found" }, { status: 404, headers: { Vary: "Origin", "Cache-Control": "no-store" } }) };
   const headers = corsHeaders(req, channel);
   if (!headers) return { ok: false, res: forbidden() };
+  if (!channel.active) return { ok: false, res: json({ error: "not_found" }, 404, headers) };
   return { ok: true, channel, headers };
 }
 
@@ -100,9 +100,11 @@ export function bearer(req: NextRequest): string | null {
 
 /**
  * Client IP for rate limiting. Takes the LAST x-forwarded-for entry (the one appended by the hop closest to us).
- * shortcut: there is no reverse proxy yet and Next passes a client-sent x-forwarded-for through untouched, so today
- * per-IP limits can be dodged with a forged header. The per-channel limits (in-memory burst + daily DB cap) are not
- * spoofable and are the real backstop against paid-AI abuse. Once a proxy sets/appends the header this is reliable.
+ * Next fills x-forwarded-for with the socket address only when the request has none (base-server `??=`); a
+ * client-sent header is passed through untouched. So with no reverse proxy (today) honest browsers are limited by
+ * their real IP, but per-IP limits can be dodged with a forged header. The per-channel limits (in-memory burst +
+ * daily DB cap) are not spoofable and are the real backstop against paid-AI abuse. Once a proxy in front
+ * overwrites/appends the header, the last entry is reliable.
  */
 export function clientIp(req: NextRequest): string | null {
   const xff = req.headers.get("x-forwarded-for");
@@ -111,8 +113,8 @@ export function clientIp(req: NextRequest): string | null {
 }
 
 /**
- * Per-IP limit. Without any forwarding header (no proxy in front: Next exposes no socket address) every visitor would
- * share one bucket, so the per-IP limit is skipped and the per-token / per-channel limits apply alone.
+ * Per-IP limit. If no address is known at all (should not happen: Next sets x-forwarded-for from the socket) the
+ * per-IP limit is skipped rather than putting every visitor in one bucket; per-token / per-channel limits still apply.
  */
 export function ipRateLimit(req: NextRequest, scope: string, limit: number, windowMs: number): boolean {
   const ip = clientIp(req);
