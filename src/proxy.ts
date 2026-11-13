@@ -8,6 +8,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except login, auth API, provider webhooks and static assets.
-  matcher: ["/((?!login|api/auth|api/webhooks|_next|favicon.ico).*)"],
+  // Everything except login, auth API, provider webhooks, the public web-chat widget (script, API, demo page)
+  // and static assets.
+  matcher: ["/((?!login|api/auth|api/webhooks|api/widget/|widget\\.js|widget-demo\\.html|_next|favicon.ico).*)"],
 };

@@ -37,6 +37,7 @@ export const CHANNEL_LABEL: Record<string, string> = {
   WHATSAPP_OPENWA: "WhatsApp",
   WHATSAPP_META: "WhatsApp",
   INSTAGRAM: "Instagram",
+  WEB: "Web chat",
 };
 
 export const ORDERS_PAGE_SIZE = 20;

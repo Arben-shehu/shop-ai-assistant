@@ -15,7 +15,11 @@ export function CustomerAvatar({ name, className }: { name: string | null | unde
   );
 }
 
-/** Display name for a customer: name, else phone, else external id. */
+/** Display name for a customer: name, else phone, else external id ("Vizitor web" for web chat visitors). */
 export function customerLabel(c: { name: string | null; phone: string | null; externalId: string }) {
-  return c.name?.trim() || c.phone || `+${c.externalId}`;
+  if (c.name?.trim()) return c.name.trim();
+  if (c.phone) return c.phone;
+  // Web widget visitors: externalId is "web:<sha256 hex>"; a short suffix tells visitors apart.
+  if (c.externalId.startsWith("web:")) return `Vizitor web #${c.externalId.slice(4, 8)}`;
+  return `+${c.externalId}`;
 }

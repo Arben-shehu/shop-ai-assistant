@@ -16,7 +16,13 @@ export const CHANNEL_LABEL: Record<ChannelType, string> = {
   WHATSAPP_OPENWA: "WhatsApp",
   WHATSAPP_META: "WhatsApp (Meta)",
   INSTAGRAM: "Instagram",
+  WEB: "Web chat",
 };
+
+/** Customer display name: name, phone, else the provider id ("Vizitor web #xxxx" for web chat visitors). */
+export function customerDisplay(c: { name: string | null; phone: string | null; externalId: string }) {
+  return c.name ?? c.phone ?? (c.externalId.startsWith("web:") ? `Vizitor web #${c.externalId.slice(4, 8)}` : c.externalId);
+}
 
 export function moneyFormatter(currency: string) {
   const f = new Intl.NumberFormat("sq-AL", { style: "currency", currency, maximumFractionDigits: 2 });

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrg } from "@/lib/session";
 import { channelTypeLabel } from "@/lib/channels";
 import { openwaConfigured } from "@/lib/channels/openwa";
+import { webAllowedOrigins } from "@/lib/channels/web";
 import { ensureChannelWorkers } from "@/lib/channels/workers";
 import { AddChannelMenu, ChannelCard, ChannelsLive, CopyField, type ChannelRow } from "./channel-ui";
 
@@ -19,11 +20,12 @@ export default async function ChannelsPage() {
     where: { organizationId: orgId },
     orderBy: { createdAt: "asc" },
     select: {
-      id: true, type: true, name: true, externalId: true, status: true, isActive: true, createdAt: true,
+      id: true, type: true, name: true, externalId: true, status: true, isActive: true, createdAt: true, credentials: true,
       _count: { select: { conversations: true } },
     },
   });
 
+  const appUrl = (process.env.BETTER_AUTH_URL ?? "").replace(/\/+$/, "");
   const rows: ChannelRow[] = channels.map((c) => ({
     id: c.id,
     type: c.type,
@@ -34,9 +36,18 @@ export default async function ChannelsPage() {
     isActive: c.isActive,
     conversations: c._count.conversations,
     createdAt: format(c.createdAt, "d MMM yyyy", { locale: sq }),
+    // Only the (public) origins and embed code reach the browser, never the decrypted credentials object.
+    web:
+      c.type === "WEB"
+        ? {
+            origins: webAllowedOrigins(c),
+            snippet: `<script src="${appUrl}/widget.js" data-key="${c.externalId}" async></script>`,
+            demoUrl: `${appUrl}/widget-demo.html?key=${encodeURIComponent(c.externalId)}`,
+            publicHttps: appUrl.startsWith("https://"),
+          }
+        : undefined,
   }));
 
-  const appUrl = (process.env.BETTER_AUTH_URL ?? "").replace(/\/+$/, "");
   const verifyToken = process.env.META_VERIFY_TOKEN ?? "";
   const hasOpenwa = channels.some((c) => c.type === "WHATSAPP_OPENWA");
 
@@ -45,7 +56,7 @@ export default async function ChannelsPage() {
       <ChannelsLive />
       <PageHeader
         title="Kanalet"
-        description="Numrat e WhatsApp dhe llogaritë e Instagram ku asistenti u përgjigjet klientëve."
+        description="Numrat e WhatsApp, llogaritë e Instagram dhe chat-i në faqen tuaj web, ku asistenti u përgjigjet klientëve."
         actions={<AddChannelMenu openwaReady={openwaConfigured()} />}
       />
 
@@ -67,7 +78,9 @@ export default async function ChannelsPage() {
               <Radio />
             </EmptyMedia>
             <EmptyTitle>Asnjë kanal i lidhur</EmptyTitle>
-            <EmptyDescription>Lidhni një numër WhatsApp ose një llogari Instagram që asistenti të fillojë të përgjigjet.</EmptyDescription>
+            <EmptyDescription>
+              Lidhni një numër WhatsApp, një llogari Instagram ose shtoni chat-in në faqen tuaj web që asistenti të fillojë të përgjigjet.
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

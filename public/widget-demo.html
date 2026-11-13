@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="sq">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Provë e chat-it</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #f3f4f6;
+        color: #111827;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 48px 16px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 12px;
+      }
+      p {
+        line-height: 1.6;
+        color: #374151;
+      }
+      code {
+        background: #e5e7eb;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        word-break: break-all;
+      }
+      .error {
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Faqe prove për chat-in</h1>
+      <p>
+        Kjo faqe imiton faqen web të dyqanit. Klikoni flluskën poshtë djathtas dhe shkruani një mesazh: biseda shfaqet te
+        <strong>Bisedat</strong> në panel, si ato të WhatsApp dhe Instagram.
+      </p>
+      <p id="status"></p>
+    </main>
+    <script>
+      (function () {
+        var status = document.getElementById("status");
+        var key = new URLSearchParams(location.search).get("key") || "";
+        // Strict charset: the key ends up in an attribute of a script served from the app's own origin.
+        if (!/^wk_[A-Za-z0-9_-]{32}$/.test(key)) {
+          status.className = "error";
+          status.textContent = "Mungon ose është i pavlefshëm parametri ?key= (çelësi i widget-it nga faqja Kanalet).";
+          return;
+        }
+        var code = document.createElement("code");
+        code.textContent = key;
+        status.textContent = "Çelësi: ";
+        status.appendChild(code);
+        var s = document.createElement("script");
+        s.src = "/widget.js";
+        s.async = true;
+        s.setAttribute("data-key", key);
+        document.body.appendChild(s);
+      })();
+    </script>
+  </body>
+</html>

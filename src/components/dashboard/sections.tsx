@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatTile } from "./stat-tile";
 import { DailyChart, type DailyChartData } from "./daily-chart";
 import { EmptyState, OrderStatusBadge } from "./bits";
-import { CHANNEL_LABEL, dailyChartData, intFormat, localDayStart, moneyFormatter, shopSettings, timeAgo } from "./lib";
+import { CHANNEL_LABEL, customerDisplay, dailyChartData, intFormat, localDayStart, moneyFormatter, shopSettings, timeAgo } from "./lib";
 
 // Every loader takes the orgId from the page's requireOrg(); nothing here authenticates on its own.
 
@@ -114,7 +114,7 @@ export async function LatestOrdersSection({ orgId }: { orgId: string }) {
       rows={orders.map((o) => ({
         id: o.id,
         number: o.number,
-        customer: o.customer.name ?? o.customer.phone ?? o.customer.externalId,
+        customer: customerDisplay(o.customer),
         items: o._count.items,
         total: money(Number(o.total)),
         status: o.status,
@@ -202,7 +202,7 @@ export async function AttentionSection({ orgId }: { orgId: string }) {
     <AttentionList
       rows={convs.map((c) => ({
         id: c.id,
-        customer: c.customer.name ?? c.customer.phone ?? c.customer.externalId,
+        customer: customerDisplay(c.customer),
         channel: CHANNEL_LABEL[c.channel.type],
         mode: c.mode,
         unread: c.unreadCount,

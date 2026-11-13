@@ -16,6 +16,7 @@ import {
 import { testMetaWhatsApp } from "@/lib/channels/meta-whatsapp";
 import { testInstagram } from "@/lib/channels/instagram";
 import { markChannelConnected, markChannelError, setChannelStatus } from "@/lib/channels/status";
+import { generateWidgetKey, MAX_ORIGINS, normalizeOrigin, webAllowedOrigins } from "@/lib/channels/web";
 import { ensureChannelWorkers } from "@/lib/channels/workers";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -177,12 +178,75 @@ export async function updateChannelToken(input: z.input<typeof tokenSchema>): Pr
   try {
     const channel = await ownChannel(orgId, parsed.data.id);
     if (channel.type === "WHATSAPP_OPENWA") return { ok: false, error: "OpenWA nuk përdor token" };
+    if (channel.type === "WEB") return { ok: false, error: "Web chat nuk përdor token" };
     const kind = channel.type === "WHATSAPP_META" ? "meta_whatsapp" : "instagram";
     await prisma.channel.update({
       where: { id: channel.id },
       data: { credentials: encryptJson({ kind, accessToken: parsed.data.accessToken }) },
     });
     await logActivity({ orgId, userId: user.id, action: "channel.token_updated", entityType: "Channel", entityId: channel.id });
+    done(orgId, channel.id);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+// ---------------------------------------------------------------- Web chat widget
+
+/** One origin per line / comma. Returns normalised, de-duplicated origins or the first invalid entry. */
+function parseOrigins(input: unknown): { ok: true; origins: string[] } | { ok: false; error: string } {
+  const list = Array.isArray(input) ? input : typeof input === "string" ? input.split(/[\s,]+/) : [];
+  const origins: string[] = [];
+  for (const raw of list) {
+    if (typeof raw !== "string" || !raw.trim()) continue;
+    const o = normalizeOrigin(raw);
+    if (!o) return { ok: false, error: `Adresë e pavlefshme: “${raw.trim().slice(0, 80)}” (p.sh. https://dyqani.al)` };
+    if (!origins.includes(o)) origins.push(o);
+  }
+  if (origins.length > MAX_ORIGINS) return { ok: false, error: `Lejohen deri në ${MAX_ORIGINS} adresa` };
+  return { ok: true, origins };
+}
+
+export async function createWebChannel(input: { name: string; origins: string }): Promise<Result<{ channelId: string }>> {
+  const { orgId, user } = await requireOrg({ minRole: "admin" });
+  const name = nameSchema.safeParse(input?.name);
+  if (!name.success) return { ok: false, error: name.error.issues[0].message };
+  const origins = parseOrigins(input?.origins);
+  if (!origins.ok) return origins;
+  try {
+    const channel = await prisma.channel.create({
+      data: {
+        organizationId: orgId,
+        type: "WEB",
+        name: name.data,
+        externalId: generateWidgetKey(),
+        credentials: encryptJson({ kind: "web", allowedOrigins: origins.origins }),
+        status: "CONNECTED",
+      },
+    });
+    await logActivity({ orgId, userId: user.id, action: "channel.created", entityType: "Channel", entityId: channel.id, meta: { type: "WEB" } });
+    done(orgId, channel.id);
+    return { ok: true, channelId: channel.id };
+  } catch (e) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+export async function updateWebOrigins(input: { id: string; origins: string }): Promise<Result> {
+  const { orgId, user } = await requireOrg({ minRole: "admin" });
+  const origins = parseOrigins(input?.origins);
+  if (!origins.ok) return origins;
+  try {
+    const channel = await ownChannel(orgId, input?.id);
+    if (channel.type !== "WEB") return { ok: false, error: "Ky kanal nuk është Web chat" };
+    await prisma.channel.update({
+      where: { id: channel.id },
+      data: { credentials: encryptJson({ kind: "web", allowedOrigins: origins.origins }) },
+    });
+    await logActivity({
+      orgId, userId: user.id, action: "channel.origins_updated", entityType: "Channel", entityId: channel.id, meta: { origins: origins.origins },
+    });
     done(orgId, channel.id);
     return { ok: true };
   } catch (e) {
@@ -204,9 +268,13 @@ export async function testChannel(id: string): Promise<Result<{ info: string }>>
         if (s.status !== "ready") throw new Error(`Sesioni nuk është gati (${s.status})`);
         await ensureWebhook(channel.externalId);
         info = s.phone ? `+${s.phone}${s.pushName ? ` · ${s.pushName}` : ""}` : "Gati";
+      } else if (channel.type === "WEB") {
+        // Nothing external to probe: the widget polls us.
+        const n = webAllowedOrigins(channel).length;
+        info = n ? `Widget-i është gati (${n} adresa të lejuara)` : "Widget-i është gati, por asnjë faqe nuk është lejuar ende";
       } else {
         const c = loadChannelCredentials(channel);
-        if (!c || c.kind === "openwa") throw new Error("Token-i mungon");
+        if (!c || c.kind === "openwa" || c.kind === "web") throw new Error("Token-i mungon");
         info =
           channel.type === "WHATSAPP_META" ? await testMetaWhatsApp(channel.externalId, c.accessToken) : await testInstagram(c.accessToken);
       }

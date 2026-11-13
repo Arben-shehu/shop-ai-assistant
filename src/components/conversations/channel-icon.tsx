@@ -5,11 +5,30 @@ export const CHANNEL_LABEL: Record<ChannelType, string> = {
   WHATSAPP_OPENWA: "WhatsApp",
   WHATSAPP_META: "WhatsApp",
   INSTAGRAM: "Instagram",
+  WEB: "Web chat",
 };
 
-/** WhatsApp / Instagram mark with an accessible label. */
+/** WhatsApp / Instagram / web chat mark with an accessible label. */
 export function ChannelIcon({ type, className }: { type: ChannelType; className?: string }) {
   const label = CHANNEL_LABEL[type];
+  if (type === "WEB")
+    return (
+      <svg
+        role="img"
+        aria-label={label}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn("size-3.5 shrink-0 text-sky-600 dark:text-sky-400", className)}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    );
   if (type === "INSTAGRAM")
     return (
       <svg

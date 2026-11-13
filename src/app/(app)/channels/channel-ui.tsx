@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import {
-  Camera, Check, ChevronDown, Copy, Eye, EyeOff, KeyRound, MessageCircle, MoreHorizontal, Plug, PlugZap, Plus, QrCode,
-  RefreshCw, Smartphone, Trash2, Unplug,
+  Camera, Check, ChevronDown, Copy, ExternalLink, Eye, EyeOff, Globe, KeyRound, MessageCircle, MoreHorizontal, Plug, PlugZap,
+  Plus, QrCode, RefreshCw, Smartphone, Trash2, TriangleAlert, Unplug,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ChannelStatus, ChannelType } from "@/generated/prisma/client";
@@ -25,9 +25,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  createMetaChannel, createOpenwaChannel, deleteChannel, disconnectChannel, pollOpenwaChannel, reconnectOpenwaChannel,
-  setChannelActive, testChannel, updateChannelToken,
+  createMetaChannel, createOpenwaChannel, createWebChannel, deleteChannel, disconnectChannel, pollOpenwaChannel,
+  reconnectOpenwaChannel, setChannelActive, testChannel, updateChannelToken, updateWebOrigins,
 } from "./actions";
 
 export type ChannelRow = {
@@ -40,6 +41,8 @@ export type ChannelRow = {
   isActive: boolean;
   conversations: number;
   createdAt: string;
+  /** WEB only: allowed origins + embed code (no secrets). */
+  web?: { origins: string[]; snippet: string; demoUrl: string; publicHttps: boolean };
 };
 
 const statusLabel: Record<ChannelStatus, string> = {
@@ -57,6 +60,7 @@ function StatusBadge({ status, active }: { status: ChannelStatus; active: boolea
 
 function TypeIcon({ type }: { type: ChannelType }) {
   if (type === "INSTAGRAM") return <Camera className="size-4" />;
+  if (type === "WEB") return <Globe className="size-4" />;
   if (type === "WHATSAPP_META") return <MessageCircle className="size-4" />;
   return <Smartphone className="size-4" />;
 }
@@ -67,7 +71,9 @@ export function ChannelsLive() {
   return null;
 }
 
-export function CopyField({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
+export function CopyField({
+  label, value, secret = false, multiline = false,
+}: { label: string; value: string; secret?: boolean; multiline?: boolean }) {
   const [shown, setShown] = useState(!secret);
   const [copied, setCopied] = useState(false);
   async function copy() {
@@ -83,7 +89,11 @@ export function CopyField({ label, value, secret = false }: { label: string; val
     <div className="grid gap-1.5">
       <Label>{label}</Label>
       <div className="flex gap-2">
-        <Input readOnly value={shown ? value : "•".repeat(Math.min(value.length, 24))} className="font-mono text-xs" />
+        {multiline ? (
+          <Textarea readOnly value={value} rows={3} className="min-h-0 resize-none font-mono text-xs break-all" />
+        ) : (
+          <Input readOnly value={shown ? value : "•".repeat(Math.min(value.length, 24))} className="font-mono text-xs" />
+        )}
         {secret && (
           <Button type="button" variant="outline" size="icon" onClick={() => setShown((s) => !s)} aria-label={shown ? "Fshih" : "Shfaq"}>
             {shown ? <EyeOff /> : <Eye />}
@@ -100,7 +110,7 @@ export function CopyField({ label, value, secret = false }: { label: string; val
 // ---------------------------------------------------------------- add channel
 
 export function AddChannelMenu({ openwaReady }: { openwaReady: boolean }) {
-  const [dialog, setDialog] = useState<null | "openwa" | "WHATSAPP_META" | "INSTAGRAM">(null);
+  const [dialog, setDialog] = useState<null | "openwa" | "WHATSAPP_META" | "INSTAGRAM" | "WEB">(null);
   const [qrFor, setQrFor] = useState<string | null>(null);
   return (
     <>
@@ -120,6 +130,9 @@ export function AddChannelMenu({ openwaReady }: { openwaReady: boolean }) {
           <DropdownMenuItem onSelect={() => setDialog("INSTAGRAM")}>
             <Camera /> Shto Instagram
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setDialog("WEB")}>
+            <Globe /> Shto Web chat
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <AddOpenwaDialog
@@ -134,7 +147,111 @@ export function AddChannelMenu({ openwaReady }: { openwaReady: boolean }) {
         <AddMetaDialog type={dialog} open onOpenChange={(o) => !o && setDialog(null)} />
       )}
       {qrFor && <QrDialog channelId={qrFor} open onOpenChange={(o) => !o && setQrFor(null)} />}
+      {dialog === "WEB" && <WebChannelDialog open onOpenChange={(o) => !o && setDialog(null)} />}
     </>
+  );
+}
+
+// ---------------------------------------------------------------- web chat
+
+const ORIGINS_HELP = "Një adresë për rresht, p.sh. https://dyqani.al dhe https://www.dyqani.al. Vetëm këto faqe mund ta shfaqin chat-in.";
+
+/** Create a web chat channel (no `channel`) or edit the allowed origins of an existing one. */
+function WebChannelDialog({
+  channel, open, onOpenChange,
+}: { channel?: { id: string; origins: string[] }; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const editing = !!channel;
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const origins = String(f.get("origins") ?? "");
+    setError(null);
+    start(async () => {
+      const r = editing
+        ? await updateWebOrigins({ id: channel.id, origins })
+        : await createWebChannel({ name: String(f.get("name") ?? ""), origins });
+      if (!r.ok) return setError(r.error);
+      toast.success(editing ? "Faqet e lejuara u ruajtën" : "Web chat u krijua. Kopjoni kodin në faqen tuaj.");
+      onOpenChange(false);
+    });
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Faqet e lejuara" : "Shto Web chat"}</DialogTitle>
+            <DialogDescription>
+              {editing
+                ? "Chat-i funksionon vetëm në faqet e listuara këtu."
+                : "Një flluskë chat-i në faqen tuaj web. Vizitorët i shkruajnë asistentit dhe bisedat shfaqen te Bisedat."}
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            {!editing && (
+              <Field>
+                <FieldLabel htmlFor="web-name">Emri i kanalit</FieldLabel>
+                <Input id="web-name" name="name" required minLength={2} maxLength={60} placeholder="p.sh. Chat në faqe" />
+              </Field>
+            )}
+            <Field>
+              <FieldLabel htmlFor="web-origins">Adresat e faqes</FieldLabel>
+              <Textarea
+                id="web-origins"
+                name="origins"
+                rows={3}
+                className="font-mono text-xs"
+                placeholder="https://dyqani.al"
+                defaultValue={channel?.origins.join("\n")}
+              />
+              <FieldDescription>{ORIGINS_HELP}</FieldDescription>
+            </Field>
+          </FieldGroup>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <DialogFooter>
+            <Button type="submit" disabled={pending}>
+              {pending && <Spinner />} {editing ? "Ruaj" : "Krijo"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function WebEmbed({ web }: { web: NonNullable<ChannelRow["web"]> }) {
+  return (
+    <div className="mt-2 grid gap-3">
+      <CopyField label="Kodi për faqen (vendoseni para </body>)" value={web.snippet} multiline />
+      <div className="text-muted-foreground grid gap-1">
+        <span>Faqet e lejuara:</span>
+        {web.origins.length ? (
+          <ul className="text-foreground grid gap-0.5 font-mono text-xs">
+            {web.origins.map((o) => (
+              <li key={o} className="truncate">
+                {o}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <span className="text-xs">Asnjë ende — chat-i funksionon vetëm në faqen e provës.</span>
+        )}
+      </div>
+      {!web.publicHttps && (
+        <p className="flex gap-2 text-xs text-amber-700 dark:text-amber-400">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+          Serveri nuk ka ende adresë publike HTTPS. Chat-i funksionon në faqe reale vetëm pasi serveri të ketë një URL publike
+          HTTPS; deri atëherë provojeni te faqja e provës.
+        </p>
+      )}
+      <Button variant="outline" size="sm" className="w-fit" asChild>
+        <a href={web.demoUrl} target="_blank" rel="noopener noreferrer">
+          <ExternalLink /> Hap faqen e provës
+        </a>
+      </Button>
+    </div>
   );
 }
 
@@ -315,6 +432,7 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
   const [qrOpen, setQrOpen] = useState(false);
   const [confirm, setConfirm] = useState<null | "delete" | "disconnect">(null);
   const [tokenOpen, setTokenOpen] = useState(false);
+  const [originsOpen, setOriginsOpen] = useState(false);
   const openwa = c.type === "WHATSAPP_OPENWA";
 
   const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) =>
@@ -375,6 +493,10 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
                     <Unplug /> Shkëput
                   </DropdownMenuItem>
                 </>
+              ) : c.type === "WEB" ? (
+                <DropdownMenuItem onSelect={() => setOriginsOpen(true)}>
+                  <Globe /> Ndrysho faqet e lejuara
+                </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem onSelect={() => setTokenOpen(true)}>
                   <KeyRound /> Ndrysho token-in
@@ -390,7 +512,9 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
       </CardHeader>
       <CardContent className="grid gap-1 text-sm">
         <div className="text-muted-foreground flex min-w-0 gap-2">
-          <span className="shrink-0">{openwa ? "Sesioni:" : c.type === "INSTAGRAM" ? "Account ID:" : "Phone number ID:"}</span>
+          <span className="shrink-0">
+            {openwa ? "Sesioni:" : c.type === "INSTAGRAM" ? "Account ID:" : c.type === "WEB" ? "Çelësi i widget-it:" : "Phone number ID:"}
+          </span>
           <span className="text-foreground truncate font-mono text-xs leading-5">{c.externalId}</span>
         </div>
         <div className="text-muted-foreground">
@@ -401,6 +525,7 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
             <QrCode /> Skano kodin QR
           </Button>
         )}
+        {c.web && <WebEmbed web={c.web} />}
       </CardContent>
       <CardFooter className="justify-between gap-2">
         <Label htmlFor={`active-${c.id}`} className="text-muted-foreground font-normal">
@@ -416,6 +541,9 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
 
       {qrOpen && <QrDialog channelId={c.id} open onOpenChange={setQrOpen} />}
       {tokenOpen && <TokenDialog id={c.id} open onOpenChange={setTokenOpen} />}
+      {originsOpen && c.web && (
+        <WebChannelDialog channel={{ id: c.id, origins: c.web.origins }} open onOpenChange={setOriginsOpen} />
+      )}
       <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
