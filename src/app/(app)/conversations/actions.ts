@@ -65,7 +65,7 @@ export async function markConversationRead(rawId: string): Promise<ActionResult>
 
 const sendSchema = z.object({ conversationId: idSchema, text: z.string().trim().min(1).max(4000) });
 
-/** Operator reply. Only allowed while the conversation is in HUMAN mode. */
+/** Operator reply. Writing to an AI/CLOSED conversation takes it over first, so the AI stops answering. */
 export async function sendOperatorMessage(input: z.input<typeof sendSchema>): Promise<ActionResult> {
   const { orgId, user } = await requireOrg();
   const parsed = sendSchema.safeParse(input);
@@ -77,7 +77,14 @@ export async function sendOperatorMessage(input: z.input<typeof sendSchema>): Pr
     select: { mode: true },
   });
   if (!conversation) return NOT_FOUND;
-  if (conversation.mode !== "HUMAN") return { ok: false, error: "Merrni bisedën përpara se t'i shkruani klientit." };
+  if (conversation.mode !== "HUMAN") {
+    await prisma.conversation.updateMany({
+      where: { id: conversationId, organizationId: orgId, mode: { not: "HUMAN" } },
+      data: { mode: "HUMAN", assigneeId: user.id },
+    });
+    await logActivity({ orgId, userId: user.id, action: "conversation.taken_over", entityType: "conversation", entityId: conversationId, meta: { by: "reply" } });
+    refresh(orgId, conversationId);
+  }
 
   try {
     const res = await sendToCustomer(conversationId, text, { sender: "OPERATOR", operatorId: user.id });

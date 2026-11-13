@@ -16,11 +16,10 @@ export function Composer({ conversationId, mode }: { conversationId: string; mod
   const [pending, start] = useTransition();
   const ref = useRef<HTMLTextAreaElement>(null);
   const hintId = useId();
-  const enabled = mode === "HUMAN";
 
   function send() {
     const value = text.trim();
-    if (!value || pending || !enabled) return;
+    if (!value || pending) return;
     start(async () => {
       const res = await sendOperatorMessage({ conversationId, text: value });
       if (res.ok) {
@@ -38,10 +37,10 @@ export function Composer({ conversationId, mode }: { conversationId: string; mod
         send();
       }}
     >
-      {!enabled && (
+      {mode !== "HUMAN" && (
         <div id={hintId} className="bg-muted/60 mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm">
           <span className="text-muted-foreground">
-            {mode === "CLOSED" ? "Biseda është e mbyllur." : "AI po i përgjigjet klientit."} Merrni bisedën për t&apos;i shkruar.
+            {mode === "CLOSED" ? "Biseda është e mbyllur." : "AI po i përgjigjet klientit."} Nëse shkruani ju, AI ndalon dhe biseda kalon te ju.
           </span>
           <TakeOverButton conversationId={conversationId} />
         </div>
@@ -61,14 +60,13 @@ export function Composer({ conversationId, mode }: { conversationId: string; mod
               send();
             }
           }}
-          disabled={!enabled}
-          aria-describedby={enabled ? undefined : hintId}
-          placeholder={enabled ? "Shkruani një mesazh… (Enter dërgon, Shift+Enter rresht i ri)" : "Merrni bisedën për të shkruar"}
+          aria-describedby={mode === "HUMAN" ? undefined : hintId}
+          placeholder="Shkruani një mesazh… (Enter dërgon, Shift+Enter rresht i ri)"
           rows={1}
           maxLength={4000}
           className="max-h-40 min-h-10 resize-none"
         />
-        <Button type="submit" size="icon-lg" disabled={!enabled || pending || !text.trim()} aria-label="Dërgo mesazhin">
+        <Button type="submit" size="icon-lg" disabled={pending || !text.trim()} aria-label="Dërgo mesazhin">
           {pending ? <Spinner aria-label="Duke dërguar" /> : <SendHorizontal aria-hidden />}
         </Button>
       </div>
