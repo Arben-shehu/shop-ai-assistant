@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail,
 } from "@/components/ui/sidebar";
 import { adminNav, shopNav, type NavItem } from "@/lib/nav";
 import { UserMenu } from "@/components/user-menu";
+import { ShopSwitcher } from "@/components/shop-switcher";
 
 type Props = {
   orgName: string | null;
@@ -34,21 +34,7 @@ export function AppSidebar({ orgName, canManage, platformAdmin, user }: Props) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
-                <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Bot className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{orgName ?? "Shop AI"}</span>
-                  <span className="text-muted-foreground truncate text-xs">Asistent AI</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <ShopSwitcher orgName={orgName} platformAdmin={platformAdmin} />
       </SidebarHeader>
       <SidebarContent>
         {orgName && (

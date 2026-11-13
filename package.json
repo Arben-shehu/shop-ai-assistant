@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0 -p 4710",
+    "dev": "env -u ANTHROPIC_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_CUSTOM_HEADERS -u ANTHROPIC_API_KEY -u ANTHROPIC_MODEL next dev -H 0.0.0.0 -p 4710",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 4710",
+    "start": "env -u ANTHROPIC_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_CUSTOM_HEADERS -u ANTHROPIC_API_KEY -u ANTHROPIC_MODEL next start -H 0.0.0.0 -p 4710",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
