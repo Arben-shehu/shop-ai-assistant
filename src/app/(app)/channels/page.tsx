@@ -20,12 +20,18 @@ export default async function ChannelsPage() {
     where: { organizationId: orgId },
     orderBy: { createdAt: "asc" },
     select: {
-      id: true, type: true, name: true, externalId: true, status: true, isActive: true, createdAt: true, credentials: true,
+      id: true, type: true, name: true, externalId: true, status: true, isActive: true, createdAt: true, credentials: true, phone: true,
       _count: { select: { conversations: true } },
     },
   });
 
   const appUrl = (process.env.BETTER_AUTH_URL ?? "").replace(/\/+$/, "");
+  // Same pick as the widget API (findWidgetChannel): first active CONNECTED WhatsApp channel with a number, OpenWA first.
+  const isWa = (t: string) => t === "WHATSAPP_OPENWA" || t === "WHATSAPP_META";
+  const defaultWhatsApp =
+    [...channels]
+      .filter((c) => isWa(c.type) && c.isActive && c.status === "CONNECTED" && c.phone)
+      .sort((a, b) => (a.type === "WHATSAPP_OPENWA" ? 0 : 1) - (b.type === "WHATSAPP_OPENWA" ? 0 : 1))[0]?.phone ?? null;
   const rows: ChannelRow[] = channels.map((c) => ({
     id: c.id,
     type: c.type,
@@ -35,6 +41,7 @@ export default async function ChannelsPage() {
     status: c.status,
     isActive: c.isActive,
     conversations: c._count.conversations,
+    phone: isWa(c.type) ? c.phone : null,
     createdAt: format(c.createdAt, "d MMM yyyy", { locale: sq }),
     // Only the (public) origins and embed code reach the browser, never the decrypted credentials object.
     web:
@@ -44,6 +51,8 @@ export default async function ChannelsPage() {
             snippet: `<script src="${appUrl}/widget.js" data-key="${c.externalId}" async></script>`,
             demoUrl: `${appUrl}/widget-demo.html?key=${encodeURIComponent(c.externalId)}`,
             publicHttps: appUrl.startsWith("https://"),
+            whatsappOverride: c.phone,
+            whatsapp: c.phone ?? defaultWhatsApp,
           }
         : undefined,
   }));

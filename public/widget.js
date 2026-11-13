@@ -1,7 +1,9 @@
 /*!
  * Web chat widget. Embed on the shop's site:
  *   <script src="https://APP/widget.js" data-key="wk_..." async></script>
- * Optional attributes: data-title, data-greeting, data-color (#rgb / #rrggbb).
+ * Optional attributes: data-title, data-greeting, data-color (#rgb / #rrggbb),
+ *   data-whatsapp-text (prefilled text of the "Vazhdo në WhatsApp" link).
+ * The WhatsApp number itself comes from the server (GET/POST .../session -> whatsapp), never from the page.
  * No dependencies. All message content is rendered with textContent (never innerHTML).
  */
 (function () {
@@ -49,6 +51,8 @@
     dailyLimit: "Chat-i është i zënë për momentin. Provoni më vonë.",
     unavailable: "Chat-i nuk është i disponueshëm.",
     tooLong: "Mesazhi është shumë i gjatë.",
+    whatsapp: "Vazhdo në WhatsApp",
+    whatsappText: (script.getAttribute("data-whatsapp-text") || "").trim().slice(0, 300) || "Përshëndetje! Ju shkruaj nga faqja juaj e internetit.",
   };
   var MAX_LEN = 1000;
   var POLL_OPEN_MS = 3000;
@@ -90,6 +94,7 @@
   var polling = false;
   var lastSeen = load(SEEN_KEY) || "";
   var loadedOnce = false;
+  var configLoaded = false;
 
   // ---------------------------------------------------------------- DOM
   var host = document.createElement("div");
@@ -125,6 +130,10 @@
     ".in-text:focus{outline:2px solid var(--c);outline-offset:-1px;border-color:transparent}" +
     ".send{border:0;border-radius:10px;background:var(--c);color:#fff;font-size:14px;font-weight:600;padding:0 14px;cursor:pointer}" +
     ".send:disabled{opacity:.5;cursor:default}" +
+    ".wa{display:none;align-items:center;justify-content:center;gap:8px;padding:9px 12px;border-top:1px solid #e5e7eb;" +
+    "background:#f0fdf4;color:#166534;font-size:14px;font-weight:600;text-decoration:none;line-height:1.2}" +
+    ".wa.show{display:flex}.wa:hover{background:#dcfce7}.wa:focus-visible{outline:3px solid rgba(0,0,0,.35);outline-offset:-3px}" +
+    ".wa svg{width:20px;height:20px;flex:none}" +
     "@media (max-width:480px){.panel{right:0;bottom:0;width:100vw;height:100%;max-height:none;border-radius:0}" +
     ".panel.open~.bubble{display:none}.in-text{font-size:16px}}";
   root.appendChild(style);
@@ -163,8 +172,18 @@
   form.appendChild(input);
   form.appendChild(sendBtn);
 
+  // "Vazhdo në WhatsApp": hidden until the server returns our number.
+  var waLink = el("a", "wa");
+  waLink.target = "_blank";
+  waLink.rel = "noopener noreferrer";
+  waLink.appendChild(waIcon());
+  var waLabel = el("span");
+  waLabel.textContent = L.whatsapp;
+  waLink.appendChild(waLabel);
+
   panel.appendChild(head);
   panel.appendChild(list);
+  panel.appendChild(waLink);
   panel.appendChild(form);
 
   var bubble = el("button", "bubble");
@@ -197,6 +216,38 @@
     p.setAttribute("d", "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z");
     svg.appendChild(p);
     return svg;
+  }
+
+  function waIcon() {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    var p = document.createElementNS(ns, "path");
+    p.setAttribute("fill", "#25D366");
+    p.setAttribute("d", "M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z");
+    svg.appendChild(p);
+    var h = document.createElementNS(ns, "path");
+    h.setAttribute("fill", "#fff");
+    h.setAttribute(
+      "d",
+      "M9.2 7.2c-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.9 4.5 4 " +
+        "2.2.9 2.7.7 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3l-1.7-.8c-.2-.1-.4-.1-.6.1" +
+        "l-.8 1c-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2-1.3-.8-.7-1.3-1.5-1.4-1.8-.2-.3 0-.4.1-.5l.4-.4.2-.4v-.4l-.8-1.9z"
+    );
+    svg.appendChild(h);
+    return svg;
+  }
+
+  /** Shows the WhatsApp link for a server-provided number (digits only), hides it otherwise. */
+  function setWhatsApp(number) {
+    if (typeof number === "string" && /^\d{8,15}$/.test(number)) {
+      waLink.href = "https://wa.me/" + number + "?text=" + encodeURIComponent(L.whatsappText);
+      waLink.classList.add("show");
+    } else {
+      waLink.removeAttribute("href");
+      waLink.classList.remove("show");
+    }
   }
 
   // ---------------------------------------------------------------- rendering
@@ -311,8 +362,28 @@
       token = r.data.token;
       store(TOKEN_KEY, token);
       if (r.data.shop && !L.title) setTitle(r.data.shop);
+      if ("whatsapp" in r.data) setWhatsApp(r.data.whatsapp);
       return token;
     });
+  }
+
+  // Token-less config (shop name + WhatsApp number), once per page load when the panel is first opened.
+  function loadConfig() {
+    if (configLoaded || disabled) return;
+    configLoaded = true;
+    fetch(API + "/session", { method: "GET", credentials: "omit", cache: "no-store" })
+      .then(function (res) {
+        if (handleUnavailable(res.status)) return null;
+        return res.status === 200 ? res.json() : null;
+      })
+      .then(function (data) {
+        if (!data) return;
+        if (data.shop && !L.title) setTitle(data.shop);
+        setWhatsApp(data.whatsapp);
+      })
+      .catch(function () {
+        configLoaded = false; // offline: retry on the next open
+      });
   }
 
   function setTitle(t) {
@@ -323,6 +394,7 @@
   function handleUnavailable(status) {
     if (status === 404 || status === 403) {
       disabled = true;
+      setWhatsApp(null);
       stopPolling();
       render();
       return true;
@@ -415,6 +487,7 @@
     bubble.setAttribute("aria-expanded", String(open));
     bubble.setAttribute("aria-label", open ? L.close : L.open);
     if (open) {
+      loadConfig();
       markSeen();
       render();
       setTimeout(function () {

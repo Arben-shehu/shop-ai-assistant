@@ -13,7 +13,41 @@ import { WIDGET_KEY_RE, webAllowedOrigins } from "@/lib/channels/web";
  * page, non-browser clients) are served: CORS cannot stop non-browser clients anyway, the abuse limits below do.
  */
 
-export type WidgetChannel = { id: string; organizationId: string; shopName: string; origins: string[]; active: boolean };
+export type WidgetChannel = {
+  id: string;
+  organizationId: string;
+  shopName: string;
+  origins: string[];
+  active: boolean;
+  /** Our WhatsApp number (digits) for the widget's "Vazhdo në WhatsApp" link, or null. Server-side only, never from the client. */
+  whatsapp: string | null;
+};
+
+const PHONE_RE = /^\d{8,15}$/;
+
+/**
+ * The number the widget links to: the WEB channel's own override (Channel.phone on the WEB row) if set, otherwise the
+ * same organization's first active CONNECTED WhatsApp channel with a known number, OpenWA before Meta, oldest first.
+ */
+async function resolveWhatsApp(organizationId: string, override: string | null): Promise<string | null> {
+  if (override && PHONE_RE.test(override)) return override;
+  const rows = await prisma.channel.findMany({
+    where: {
+      organizationId,
+      type: { in: ["WHATSAPP_OPENWA", "WHATSAPP_META"] },
+      isActive: true,
+      status: "CONNECTED",
+      phone: { not: null },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { type: true, phone: true },
+  });
+  const rank = (t: string) => (t === "WHATSAPP_OPENWA" ? 0 : 1);
+  const hit = rows
+    .filter((r) => r.phone && PHONE_RE.test(r.phone))
+    .sort((a, b) => rank(a.type) - rank(b.type))[0]; // stable sort keeps createdAt order within a type
+  return hit?.phone ?? null;
+}
 
 const appOrigin = () => {
   try {
@@ -25,7 +59,7 @@ const appOrigin = () => {
 
 // shortcut: in-memory, single instance; move to DB/Redis when scaling.
 // 15 s cache of key -> channel so 3 s polling doesn't hit the DB + decrypt on every request.
-// Deactivating / editing origins takes effect within CHANNEL_TTL_MS.
+// Deactivating / editing origins / a WhatsApp number change takes effect within CHANNEL_TTL_MS.
 const CHANNEL_TTL_MS = 15_000;
 type Cached = { at: number; channel: WidgetChannel | null };
 const g = globalThis as unknown as { widgetChannelCache?: Map<string, Cached>; widgetLimits?: Map<string, number[]> };
@@ -37,10 +71,17 @@ export async function findWidgetChannel(key: string): Promise<WidgetChannel | nu
   if (hit && Date.now() - hit.at < CHANNEL_TTL_MS) return hit.channel;
   const row = await prisma.channel.findUnique({
     where: { type_externalId: { type: "WEB", externalId: key } },
-    select: { id: true, organizationId: true, isActive: true, credentials: true, organization: { select: { name: true } } },
+    select: { id: true, organizationId: true, isActive: true, credentials: true, phone: true, organization: { select: { name: true } } },
   });
-  const channel = row
-    ? { id: row.id, organizationId: row.organizationId, shopName: row.organization.name, origins: webAllowedOrigins(row), active: row.isActive }
+  const channel: WidgetChannel | null = row
+    ? {
+        id: row.id,
+        organizationId: row.organizationId,
+        shopName: row.organization.name,
+        origins: webAllowedOrigins(row),
+        active: row.isActive,
+        whatsapp: row.isActive ? await resolveWhatsApp(row.organizationId, row.phone) : null,
+      }
     : null;
   if (channelCache.size > 5_000) channelCache.clear();
   channelCache.set(key, { at: Date.now(), channel });

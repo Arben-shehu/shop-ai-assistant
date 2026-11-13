@@ -2,7 +2,7 @@ import "server-only";
 import type { Channel } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ensureWebhook, getSession, openwaConfigured, startSession, stopSession } from "@/lib/channels/openwa";
-import { markChannelError, setChannelStatus } from "@/lib/channels/status";
+import { markChannelError, saveChannelPhone, setChannelStatus } from "@/lib/channels/status";
 
 /**
  * Background care for OpenWA channels, ported from SunEasy:
@@ -52,6 +52,7 @@ export async function probeAll() {
 
 async function probeChannel(ch: Channel) {
   let status: string;
+  let phone: string | null | undefined;
   try {
     const s = await getSession(ch.externalId);
     if (!s) {
@@ -59,12 +60,15 @@ async function probeChannel(ch: Channel) {
       return;
     }
     status = s.status;
+    phone = s.phone;
   } catch {
     status = "unreachable";
   }
 
   if (status === "ready") {
     state.failures.delete(ch.id);
+    // Every ready probe, not only on the flip: channels connected before Channel.phone existed get it too.
+    await saveChannelPhone(ch, phone);
     if (ch.status !== "CONNECTED") {
       await setChannelStatus(ch, "CONNECTED");
       await ensureWebhook(ch.externalId);

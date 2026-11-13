@@ -24,3 +24,16 @@ export async function markChannelError(channel: Pick<Channel, "id" | "organizati
     link: "/channels",
   }).catch((e) => console.error("[channels] notify failed:", e));
 }
+
+/**
+ * Store our own WhatsApp number (digits only) as reported by the provider, e.g. OpenWA GET /api/sessions/:id `phone`
+ * once the session is ready. Writes + publishes only when it changed (another number scanned on reconnect).
+ * Used by the web widget's "Vazhdo në WhatsApp" link and shown on the Channels page.
+ */
+export async function saveChannelPhone(channel: Pick<Channel, "id" | "organizationId">, raw: string | null | undefined) {
+  const phone = (raw ?? "").replace(/\D/g, "");
+  if (phone.length < 8 || phone.length > 15) return false;
+  const r = await prisma.channel.updateMany({ where: { id: channel.id, OR: [{ phone: null }, { phone: { not: phone } }] }, data: { phone } });
+  if (r.count) publish(channel.organizationId, { type: "channel", channelId: channel.id });
+  return r.count > 0;
+}

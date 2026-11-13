@@ -2,7 +2,7 @@
 import { useEffect, useState, useTransition } from "react";
 import {
   Camera, Check, ChevronDown, Copy, ExternalLink, Eye, EyeOff, Globe, KeyRound, MessageCircle, MoreHorizontal, Plug, PlugZap,
-  Plus, QrCode, RefreshCw, Smartphone, Trash2, TriangleAlert, Unplug,
+  Phone, Plus, QrCode, RefreshCw, Smartphone, Trash2, TriangleAlert, Unplug,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ChannelStatus, ChannelType } from "@/generated/prisma/client";
@@ -28,7 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createMetaChannel, createOpenwaChannel, createWebChannel, deleteChannel, disconnectChannel, pollOpenwaChannel,
-  reconnectOpenwaChannel, setChannelActive, testChannel, updateChannelToken, updateWebOrigins,
+  reconnectOpenwaChannel, setChannelActive, testChannel, updateChannelPhone, updateChannelToken, updateWebOrigins,
 } from "./actions";
 
 export type ChannelRow = {
@@ -41,9 +41,23 @@ export type ChannelRow = {
   isActive: boolean;
   conversations: number;
   createdAt: string;
+  /** WhatsApp channels: our own number (digits), from the gateway (OpenWA) or typed in (Meta). */
+  phone: string | null;
   /** WEB only: allowed origins + embed code (no secrets). */
-  web?: { origins: string[]; snippet: string; demoUrl: string; publicHttps: boolean };
+  web?: {
+    origins: string[];
+    snippet: string;
+    demoUrl: string;
+    publicHttps: boolean;
+    /** Per-widget WhatsApp number (Channel.phone of the WEB row), null = organization default. */
+    whatsappOverride: string | null;
+    /** Number the widget's "Vazhdo në WhatsApp" link will use right now, null = no link. */
+    whatsapp: string | null;
+  };
 };
+
+/** "355691234567" -> "+355691234567" (display only). */
+const fmtPhone = (digits: string) => `+${digits}`;
 
 const statusLabel: Record<ChannelStatus, string> = {
   PENDING: "Në pritje",
@@ -159,7 +173,7 @@ const ORIGINS_HELP = "Një adresë për rresht, p.sh. https://dyqani.al dhe http
 /** Create a web chat channel (no `channel`) or edit the allowed origins of an existing one. */
 function WebChannelDialog({
   channel, open, onOpenChange,
-}: { channel?: { id: string; origins: string[] }; open: boolean; onOpenChange: (o: boolean) => void }) {
+}: { channel?: { id: string; origins: string[]; whatsapp: string | null }; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const editing = !!channel;
@@ -167,13 +181,14 @@ function WebChannelDialog({
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const origins = String(f.get("origins") ?? "");
+    const whatsapp = String(f.get("whatsapp") ?? "");
     setError(null);
     start(async () => {
       const r = editing
-        ? await updateWebOrigins({ id: channel.id, origins })
-        : await createWebChannel({ name: String(f.get("name") ?? ""), origins });
+        ? await updateWebOrigins({ id: channel.id, origins, whatsapp })
+        : await createWebChannel({ name: String(f.get("name") ?? ""), origins, whatsapp });
       if (!r.ok) return setError(r.error);
-      toast.success(editing ? "Faqet e lejuara u ruajtën" : "Web chat u krijua. Kopjoni kodin në faqen tuaj.");
+      toast.success(editing ? "Cilësimet u ruajtën" : "Web chat u krijua. Kopjoni kodin në faqen tuaj.");
       onOpenChange(false);
     });
   }
@@ -182,7 +197,7 @@ function WebChannelDialog({
       <DialogContent>
         <form onSubmit={onSubmit} className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>{editing ? "Faqet e lejuara" : "Shto Web chat"}</DialogTitle>
+            <DialogTitle>{editing ? "Cilësimet e Web chat" : "Shto Web chat"}</DialogTitle>
             <DialogDescription>
               {editing
                 ? "Chat-i funksionon vetëm në faqet e listuara këtu."
@@ -207,6 +222,22 @@ function WebChannelDialog({
                 defaultValue={channel?.origins.join("\n")}
               />
               <FieldDescription>{ORIGINS_HELP}</FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="web-whatsapp">Numri i WhatsApp (opsional)</FieldLabel>
+              <Input
+                id="web-whatsapp"
+                name="whatsapp"
+                type="tel"
+                inputMode="tel"
+                maxLength={30}
+                placeholder="+355 69 123 4567"
+                defaultValue={channel?.whatsapp ? fmtPhone(channel.whatsapp) : ""}
+                className="font-mono"
+              />
+              <FieldDescription>
+                Chat-i shfaq butonin “Vazhdo në WhatsApp”. Bosh = numri i kanalit të parë WhatsApp të lidhur.
+              </FieldDescription>
             </Field>
           </FieldGroup>
           {error && <p className="text-destructive text-sm">{error}</p>}
@@ -237,6 +268,17 @@ function WebEmbed({ web }: { web: NonNullable<ChannelRow["web"]> }) {
           </ul>
         ) : (
           <span className="text-xs">Asnjë ende — chat-i funksionon vetëm në faqen e provës.</span>
+        )}
+      </div>
+      <div className="text-muted-foreground flex min-w-0 flex-wrap gap-x-2">
+        <span>Butoni WhatsApp:</span>
+        {web.whatsapp ? (
+          <span className="text-foreground font-mono text-xs leading-5">
+            {fmtPhone(web.whatsapp)}
+            <span className="text-muted-foreground font-sans">{web.whatsappOverride ? " (vetëm ky widget)" : " (nga kanali WhatsApp)"}</span>
+          </span>
+        ) : (
+          <span className="text-xs leading-5">nuk shfaqet — asnjë kanal WhatsApp i lidhur me numër</span>
         )}
       </div>
       {!web.publicHttps && (
@@ -315,6 +357,7 @@ function AddMetaDialog({
         name: String(f.get("name") ?? ""),
         externalId: String(f.get("externalId") ?? ""),
         accessToken: String(f.get("accessToken") ?? ""),
+        phone: wa ? String(f.get("phone") ?? "") : undefined,
       });
       if (!r.ok) return setError(r.error);
       if (r.info.startsWith("U ruajt")) toast.warning(r.info);
@@ -351,6 +394,13 @@ function AddMetaDialog({
               <Input id="meta-token" name="accessToken" type="password" required autoComplete="off" className="font-mono" />
               <FieldDescription>Përdorni një token të përhershëm (System User), jo atë 24-orësh.</FieldDescription>
             </Field>
+            {wa && (
+              <Field>
+                <FieldLabel htmlFor="meta-phone">Numri i telefonit (opsional)</FieldLabel>
+                <Input id="meta-phone" name="phone" type="tel" inputMode="tel" maxLength={30} placeholder="+355 69 123 4567" className="font-mono" />
+                <FieldDescription>Numri që shohin klientët; përdoret për butonin “Vazhdo në WhatsApp” të chat-it në faqe.</FieldDescription>
+              </Field>
+            )}
           </FieldGroup>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <DialogFooter>
@@ -433,7 +483,9 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
   const [confirm, setConfirm] = useState<null | "delete" | "disconnect">(null);
   const [tokenOpen, setTokenOpen] = useState(false);
   const [originsOpen, setOriginsOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
   const openwa = c.type === "WHATSAPP_OPENWA";
+  const whatsapp = openwa || c.type === "WHATSAPP_META";
 
   const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) =>
     start(async () => {
@@ -495,12 +547,19 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
                 </>
               ) : c.type === "WEB" ? (
                 <DropdownMenuItem onSelect={() => setOriginsOpen(true)}>
-                  <Globe /> Ndrysho faqet e lejuara
+                  <Globe /> Ndrysho cilësimet
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem onSelect={() => setTokenOpen(true)}>
-                  <KeyRound /> Ndrysho token-in
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onSelect={() => setTokenOpen(true)}>
+                    <KeyRound /> Ndrysho token-in
+                  </DropdownMenuItem>
+                  {c.type === "WHATSAPP_META" && (
+                    <DropdownMenuItem onSelect={() => setPhoneOpen(true)}>
+                      <Phone /> Ndrysho numrin
+                    </DropdownMenuItem>
+                  )}
+                </>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setConfirm("delete")}>
@@ -517,6 +576,16 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
           </span>
           <span className="text-foreground truncate font-mono text-xs leading-5">{c.externalId}</span>
         </div>
+        {whatsapp && (
+          <div className="text-muted-foreground flex min-w-0 gap-2">
+            <span className="shrink-0">Numri:</span>
+            {c.phone ? (
+              <span className="text-foreground truncate font-mono text-xs leading-5">{fmtPhone(c.phone)}</span>
+            ) : (
+              <span className="truncate text-xs leading-5">{openwa ? "shfaqet pasi të lidhet" : "pa numër"}</span>
+            )}
+          </div>
+        )}
         <div className="text-muted-foreground">
           {c.conversations} biseda · shtuar më {c.createdAt}
         </div>
@@ -542,8 +611,13 @@ export function ChannelCard({ channel: c }: { channel: ChannelRow }) {
       {qrOpen && <QrDialog channelId={c.id} open onOpenChange={setQrOpen} />}
       {tokenOpen && <TokenDialog id={c.id} open onOpenChange={setTokenOpen} />}
       {originsOpen && c.web && (
-        <WebChannelDialog channel={{ id: c.id, origins: c.web.origins }} open onOpenChange={setOriginsOpen} />
+        <WebChannelDialog
+          channel={{ id: c.id, origins: c.web.origins, whatsapp: c.web.whatsappOverride }}
+          open
+          onOpenChange={setOriginsOpen}
+        />
       )}
+      {phoneOpen && <PhoneDialog id={c.id} phone={c.phone} open onOpenChange={setPhoneOpen} />}
       <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -599,6 +673,56 @@ function TokenDialog({ id, open, onOpenChange }: { id: string; open: boolean; on
           <Field>
             <FieldLabel htmlFor={`token-${id}`}>Access token</FieldLabel>
             <Input id={`token-${id}`} name="accessToken" type="password" required autoComplete="off" className="font-mono" />
+          </Field>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <DialogFooter>
+            <Button type="submit" disabled={pending}>
+              {pending && <Spinner />} Ruaj
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PhoneDialog({
+  id, phone, open, onOpenChange,
+}: { id: string; phone: string | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const value = String(new FormData(e.currentTarget).get("phone") ?? "");
+    setError(null);
+    start(async () => {
+      const r = await updateChannelPhone({ id, phone: value });
+      if (!r.ok) return setError(r.error);
+      toast.success(value.trim() ? "Numri u ruajt" : "Numri u hoq");
+      onOpenChange(false);
+    });
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <DialogHeader>
+            <DialogTitle>Numri i WhatsApp</DialogTitle>
+            <DialogDescription>Numri që shohin klientët. Përdoret për butonin “Vazhdo në WhatsApp” të chat-it në faqe.</DialogDescription>
+          </DialogHeader>
+          <Field>
+            <FieldLabel htmlFor={`phone-${id}`}>Numri i telefonit</FieldLabel>
+            <Input
+              id={`phone-${id}`}
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              maxLength={30}
+              placeholder="+355 69 123 4567"
+              defaultValue={phone ? fmtPhone(phone) : ""}
+              className="font-mono"
+            />
+            <FieldDescription>Lëreni bosh për ta hequr.</FieldDescription>
           </Field>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <DialogFooter>
