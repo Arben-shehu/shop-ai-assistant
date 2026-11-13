@@ -9,6 +9,7 @@ export type LiveEvent =
   | { type: "message"; conversationId: string }
   | { type: "conversation"; conversationId: string }
   | { type: "order"; orderId: string }
+  | { type: "product"; productId: string }
   | { type: "notification" }
   | { type: "channel"; channelId: string };
 
