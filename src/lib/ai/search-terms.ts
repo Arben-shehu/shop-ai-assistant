@@ -100,10 +100,14 @@ function singular(word: string): string | null {
   return null;
 }
 
+/** Number + unit, written with or without a space. Doses (mg, ml, mcg, iu) matter for pharmacies. */
+const UNIT = /(\d+(?:[.,]\d+)?)\s*(gb|tb|mb|hz|mah|w|mm|cm|mg|mcg|ml|kg|g|l|iu)\b/g;
+const UNIT_TOKEN = /^(\d+(?:[.,]\d+)?)(gb|tb|mb|hz|mah|w|mm|cm|mg|mcg|ml|kg|g|l|iu)$/;
+
 export function searchTermGroups(query: string): string[][] {
   const normalised = query
     .toLowerCase()
-    .replace(/(\d+)\s*(gb|tb|mb|hz|mah|w|mm|cm)\b/g, "$1$2") // "16 gb" → "16gb"
+    .replace(UNIT, "$1$2") // "16 gb" → "16gb", "500 mg" → "500mg"
     .replace(/[^\p{L}\p{N}.\-+]+/gu, " ")
     .trim();
 
@@ -118,6 +122,8 @@ export function searchTermGroups(query: string): string[][] {
     seen.add(folded);
 
     const variants = new Set<string>([word, folded]);
+    const unit = UNIT_TOKEN.exec(word);
+    if (unit) variants.add(`${unit[1]} ${unit[2]}`); // the catalogue may write "500 mg"
     const single = singular(folded);
     if (single) variants.add(single);
     for (const key of [folded, single]) if (key && SYNONYMS[key]) for (const s of SYNONYMS[key]) variants.add(s);

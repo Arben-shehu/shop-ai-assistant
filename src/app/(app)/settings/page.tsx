@@ -11,7 +11,16 @@ export default async function SettingsPage() {
   const source = platformAdmin
     ? await prisma.inventorySource.findUnique({
         where: { organizationId: orgId },
-        select: { dialect: true, query: true, columns: true, lastError: true, lastCheckedAt: true },
+        select: {
+          dialect: true,
+          query: true,
+          customerQuery: true,
+          historyQuery: true,
+          orderStatusQuery: true,
+          columns: true,
+          lastError: true,
+          lastCheckedAt: true,
+        },
       })
     : null;
   return (

@@ -158,8 +158,12 @@ describe("createOrder", () => {
 
   test("concurrent orders for the last unit: exactly one succeeds", async () => {
     assert.equal(await stockOf(A.mouse.id), 1);
+    // Different customers: the same customer repeating an order is refused earlier as DUPLICATE (see below).
+    const buyers = await Promise.all(
+      [0, 1, 2, 3, 4].map((i) => prisma.customer.create({ data: { organizationId: A.org.id, externalId: `race-${i}-${rid()}`, name: `R${i}` } })),
+    );
     const results = await Promise.all(
-      [0, 1, 2, 3, 4].map(() => createOrder(A.org.id, { customerId: A.customer.id, items: [{ productId: A.mouse.id, quantity: 1 }] })),
+      buyers.map((b) => createOrder(A.org.id, { customerId: b.id, items: [{ productId: A.mouse.id, quantity: 1 }] })),
     );
     assert.equal(results.filter((r) => r.ok).length, 1);
     assert.ok(results.filter((r) => !r.ok).every((r) => !r.ok && r.error.code === "OUT_OF_STOCK"));
@@ -208,6 +212,55 @@ describe("createOrder", () => {
     assert.equal(!r.ok && r.error.code, "OUT_OF_STOCK");
     assert.equal(await stockOf(A.cable.id), before);
     assert.equal(await stockOf(A.headset.id), 3);
+  });
+});
+
+describe("createOrder dedupe", () => {
+  test("same customer, same lines within 30 min: DUPLICATE with the first order's number; other qty: new order", async () => {
+    const c = await prisma.customer.create({ data: { organizationId: A.org.id, externalId: `dup-${rid()}`, name: "Dup" } });
+    const items = [
+      { productId: A.cable.id, quantity: 2 },
+      { productId: A.thinkpad.id, quantity: 1 },
+    ];
+    const first = await createOrder(A.org.id, { customerId: c.id, items });
+    assert.ok(first.ok, JSON.stringify(first));
+    const stock = await stockOf(A.cable.id);
+    const second = await createOrder(A.org.id, { customerId: c.id, items: [...items].reverse() }); // line order does not matter
+    assert.equal(!second.ok && second.error.code, "DUPLICATE");
+    assert.equal(!second.ok && second.error.code === "DUPLICATE" && second.error.number, first.order.number);
+    assert.equal(await stockOf(A.cable.id), stock, "a duplicate touches no stock");
+    const saved = await prisma.order.findUniqueOrThrow({ where: { id: first.order.id } });
+    assert.match(saved.itemsHash ?? "", /^[0-9a-f]{64}$/);
+
+    const other = await createOrder(A.org.id, { customerId: c.id, items: [{ productId: A.cable.id, quantity: 3 }, items[1]] });
+    assert.ok(other.ok, JSON.stringify(other));
+
+    // A cancelled order does not block re-ordering the same lines.
+    await prisma.order.update({ where: { id: first.order.id }, data: { status: "CANCELLED" } });
+    const again = await createOrder(A.org.id, { customerId: c.id, items });
+    assert.ok(again.ok, JSON.stringify(again));
+  });
+
+  test("two concurrent identical confirmations create one order", async () => {
+    const c = await prisma.customer.create({ data: { organizationId: A.org.id, externalId: `dupc-${rid()}`, name: "Dup C" } });
+    const run = () => createOrder(A.org.id, { customerId: c.id, items: [{ productId: A.cable.id, quantity: 1 }] });
+    const results = await Promise.all([run(), run()]);
+    assert.equal(results.filter((r) => r.ok).length, 1);
+    assert.equal(results.filter((r) => !r.ok && r.error.code === "DUPLICATE").length, 1);
+    assert.equal(await prisma.order.count({ where: { customerId: c.id } }), 1);
+  });
+
+  test("create_order tool returns the existing reference instead of an error", async () => {
+    const c = await prisma.customer.create({ data: { organizationId: A.org.id, externalId: `dupt-${rid()}`, name: "Dup T" } });
+    const input = { items: [{ productId: A.cable.id, quantity: 5 }] };
+    const first = JSON.parse((await runTool("create_order", input, ctxFor(A, c.id))).content);
+    assert.equal(first.created, true);
+    assert.equal(first.reference, `AI-${first.orderNumber}`);
+    const out = await runTool("create_order", input, ctxFor(A, c.id)); // next reply, fresh state
+    assert.equal(out.isError, false);
+    const again = JSON.parse(out.content);
+    assert.equal(again.alreadyPlaced, true);
+    assert.equal(again.reference, first.reference);
   });
 });
 

@@ -21,6 +21,9 @@ type Dialect = "POSTGRES" | "MYSQL" | "MSSQL";
 export type InventorySourceInfo = {
   dialect: Dialect;
   query: string;
+  customerQuery: string | null;
+  historyQuery: string | null;
+  orderStatusQuery: string | null;
   columns: string[];
   lastError: string | null;
   lastCheckedAt: string | null;
@@ -37,10 +40,67 @@ const QUERY_PLACEHOLDER = `SELECT kodi AS sku, emertimi AS name, cmimi AS price,
 FROM artikuj
 WHERE aktiv = 1`;
 
+type NamedKey = "customerQuery" | "historyQuery" | "orderStatusQuery";
+
+const NAMED_QUERIES: { key: NamedKey; label: string; placeholder: string; help: React.ReactNode }[] = [
+  {
+    key: "customerQuery",
+    label: "Query i klientit (opsional)",
+    placeholder: `SELECT id AS client_id, emri AS name, nipt, adresa AS address, borxhi
+FROM klientet
+WHERE right(regexp_replace(tel, '[^0-9]', '', 'g'), 9) = :phone`,
+    help: (
+      <>
+        Njeh klientin që shkruan në WhatsApp. <code>:phone</code> = 9 shifrat e fundit të numrit (p.sh. <code>691234567</code>),
+        prandaj krahasoni me 9 shifrat e fundit të telefonit në DB. Duhet të kthejë <code>client_id, name</code>; opsionale{" "}
+        <code>address</code> dhe çdo kolonë tjetër (NIPT, borxhi...). Vetëm kur numri përputhet me saktësisht një klient,
+        asistenti i sheh të dhënat e tij.
+      </>
+    ),
+  },
+  {
+    key: "historyQuery",
+    label: "Query i historikut (opsional)",
+    placeholder: `SELECT nr AS invoice_no, data AS date, totali AS total, statusi AS status
+FROM faturat
+WHERE klient_id = :client_id
+ORDER BY data DESC
+LIMIT 20`,
+    help: (
+      <>
+        Faturat/porositë e fundit të klientit të njohur. <code>:client_id</code> = <code>client_id</code> nga query i klientit.
+        Renditni dhe kufizoni brenda query-t (<code>ORDER BY ... LIMIT 20</code>, ose <code>TOP 20</code> në SQL Server);
+        merren maksimumi 20 rreshta.
+      </>
+    ),
+  },
+  {
+    key: "orderStatusQuery",
+    label: "Query i statusit të porosisë (opsional)",
+    placeholder: `SELECT CASE statusi WHEN 'konfirmuar' THEN 'CONFIRMED' WHEN 'ne pergatitje' THEN 'PREPARING'
+       WHEN 'dorezuar' THEN 'DELIVERED' WHEN 'anuluar' THEN 'CANCELLED' ELSE 'PENDING' END AS status
+FROM porosi
+WHERE referenca = :ref`,
+    help: (
+      <>
+        Stafi e fut porosinë tonë në ERP me referencën <code>AI-&lt;numri&gt;</code>; çdo 5 minuta e lexojmë statusin me{" "}
+        <code>:ref</code>. Duhet të kthejë kolonën <code>status</code> me një nga vlerat PENDING, CONFIRMED, PREPARING,
+        DELIVERED, CANCELLED (përktheni statuset e tyre me <code>CASE</code>). Opsionale <code>external_status</code> = statusi
+        me fjalët e tyre, që i shfaqet stafit.
+      </>
+    ),
+  },
+];
+
 export function InventorySourceCard({ initial }: { initial: InventorySourceInfo }) {
   const [dialect, setDialect] = useState<Dialect>(initial?.dialect ?? "POSTGRES");
   const [url, setUrl] = useState("");
   const [query, setQuery] = useState(initial?.query ?? "");
+  const [named, setNamed] = useState<Record<NamedKey, string>>({
+    customerQuery: initial?.customerQuery ?? "",
+    historyQuery: initial?.historyQuery ?? "",
+    orderStatusQuery: initial?.orderStatusQuery ?? "",
+  });
   const [test, setTest] = useState<SourceTest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -48,7 +108,7 @@ export function InventorySourceCard({ initial }: { initial: InventorySourceInfo 
   const run = (fn: typeof testInventorySource, done: string) =>
     start(async () => {
       setError(null);
-      const res = await fn({ dialect, url, query });
+      const res = await fn({ dialect, url, query, ...named });
       if (!res.ok) return setError(res.error);
       setTest(res.data ?? null);
       toast.success(done);
@@ -123,6 +183,20 @@ export function InventorySourceCard({ initial }: { initial: InventorySourceInfo 
               Kolonat e tjera ruhen si specifika. Një SELECT i vetëm, pa <code>;</code>, pa <code>WITH</code> dhe pa <code>ORDER BY</code>.
             </FieldDescription>
           </Field>
+          {NAMED_QUERIES.map((n) => (
+            <Field key={n.key}>
+              <FieldLabel htmlFor={`inv-${n.key}`}>{n.label}</FieldLabel>
+              <Textarea
+                id={`inv-${n.key}`}
+                rows={4}
+                className="font-mono text-xs"
+                value={named[n.key]}
+                onChange={(e) => setNamed((v) => ({ ...v, [n.key]: e.target.value }))}
+                placeholder={n.placeholder}
+              />
+              <FieldDescription>{n.help}</FieldDescription>
+            </Field>
+          ))}
           {error && <p className="text-destructive text-sm">{error}</p>}
           {test && (
             <div className="flex flex-col gap-2">

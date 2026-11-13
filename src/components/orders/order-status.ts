@@ -44,3 +44,6 @@ export const ORDERS_PAGE_SIZE = 20;
 
 export const PERIODS = { all: "Të gjitha datat", today: "Sot", "7d": "7 ditët e fundit", "30d": "30 ditët e fundit" } as const;
 export type Period = keyof typeof PERIODS;
+
+/** Our order reference as staff type it into the shop's ERP and as the customer is told it: "AI-1042". */
+export const orderRef = (number: number) => `AI-${number}`;

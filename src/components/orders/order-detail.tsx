@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowRightIcon, MapPinIcon, MessageSquareIcon, PhoneIcon, UserIcon, XCircleIcon } from "lucide-react";
+import { ArrowRightIcon, BuildingIcon, CopyIcon, MapPinIcon, MessageSquareIcon, PhoneIcon, UserIcon, XCircleIcon } from "lucide-react";
 import type { OrderStatus } from "@/generated/prisma/enums";
 import { updateOrderNotes, updateOrderStatus } from "@/app/(app)/orders/actions";
 import {
@@ -23,7 +23,7 @@ import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { NEXT_STEP, STATUS_LABEL } from "./order-status";
+import { NEXT_STEP, orderRef, STATUS_LABEL } from "./order-status";
 import { OrderStatusBadge } from "./order-status-badge";
 
 /** Everything pre-formatted on the server. */
@@ -38,7 +38,10 @@ export type OrderDetailData = {
   notes: string | null;
   channelLabel: string | null;
   conversationId: string | null;
-  customer: { name: string | null; phone: string | null };
+  /** Status read back from the shop's ERP (by reference AI-<number>) and when. */
+  externalStatus: string | null;
+  syncedLabel: string | null;
+  customer: { name: string | null; phone: string | null; externalRef: string | null };
   items: { id: string; name: string; quantity: number; unitPriceLabel: string; subtotalLabel: string; removed: boolean }[];
 };
 
@@ -64,6 +67,25 @@ export function OrderDetail({ order }: { order: OrderDetailData }) {
           <OrderStatusBadge status={order.status} />
         </div>
         <SheetDescription>Krijuar më {order.createdLabel}</SheetDescription>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Referenca për ERP:</span>
+          <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs">{orderRef(order.number)}</code>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            aria-label="Kopjo referencën"
+            onClick={() =>
+              navigator.clipboard
+                .writeText(orderRef(order.number))
+                .then(() => toast.success("Referenca u kopjua."))
+                .catch(() => toast.error("Kopjimi dështoi."))
+            }
+          >
+            <CopyIcon className="size-3.5" />
+          </Button>
+        </div>
       </SheetHeader>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
@@ -89,6 +111,12 @@ export function OrderDetail({ order }: { order: OrderDetailData }) {
             </div>
           )}
           <p className="text-muted-foreground text-xs">Përditësuar më {order.updatedLabel}</p>
+          {order.syncedLabel && (
+            <p className="text-muted-foreground text-xs">
+              {order.externalStatus ? `Statusi në ERP: ${order.externalStatus}` : "Ende jo e regjistruar në ERP"} · kontrolluar më{" "}
+              {order.syncedLabel}
+            </p>
+          )}
         </section>
 
         <Separator />
@@ -102,6 +130,12 @@ export function OrderDetail({ order }: { order: OrderDetailData }) {
             <InfoRow icon={UserIcon} label="Emri">
               {order.customer.name ?? <span className="text-muted-foreground">Pa emër</span>}
             </InfoRow>
+            {order.customer.externalRef && (
+              <InfoRow icon={BuildingIcon} label="ID e klientit në ERP">
+                <span className="text-muted-foreground">ID në ERP: </span>
+                <code className="font-mono text-xs">{order.customer.externalRef}</code>
+              </InfoRow>
+            )}
             {order.customer.phone && (
               <InfoRow icon={PhoneIcon} label="Telefoni">
                 <a href={`tel:${order.customer.phone}`} className="underline-offset-4 hover:underline">

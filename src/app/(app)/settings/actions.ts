@@ -6,8 +6,18 @@ import { logActivity } from "@/lib/activity";
 import { requireOrg } from "@/lib/session";
 import { saveShopSettings } from "@/lib/shop-settings";
 import { decrypt, encrypt } from "@/lib/crypto";
-import { testSource } from "@/lib/inventory/source";
-import { checkQuery, missingRequired, type InventoryRow } from "@/lib/inventory/sql";
+import { testNamedQuery, testSource } from "@/lib/inventory/source";
+import {
+  buildNamed,
+  CUSTOMER_COLUMNS,
+  checkQuery,
+  missingColumns,
+  missingRequired,
+  STATUS_COLUMNS,
+  type Dialect,
+  type InventoryRow,
+  type NamedParam,
+} from "@/lib/inventory/sql";
 import type { ActionResult } from "@/components/admin/types";
 import { nameSchema, zodError } from "@/app/(app)/admin/_lib/accounts";
 
@@ -44,7 +54,39 @@ const sourceSchema = z.object({
   dialect: z.enum(["POSTGRES", "MYSQL", "MSSQL"]),
   url: z.string().trim().max(1000), // empty = keep the saved one
   query: z.string().trim().min(10, "Shkruani query-n SELECT.").max(4000),
+  // Optional ERP queries; empty = not used.
+  customerQuery: z.string().trim().max(4000).optional(),
+  historyQuery: z.string().trim().max(4000).optional(),
+  orderStatusQuery: z.string().trim().max(4000).optional(),
 });
+
+/** Each optional query: its parameter, the sample value it is tested with, and the columns it must return. */
+const NAMED: { key: "customerQuery" | "historyQuery" | "orderStatusQuery"; label: string; param: NamedParam; sample: string; required: readonly string[] }[] = [
+  { key: "customerQuery", label: "Query i klientit", param: "phone", sample: "000000000", required: CUSTOMER_COLUMNS },
+  { key: "historyQuery", label: "Query i historikut", param: "client_id", sample: "0", required: [] },
+  { key: "orderStatusQuery", label: "Query i statusit të porosisë", param: "ref", sample: "AI-0", required: STATUS_COLUMNS },
+];
+
+/** Validate (single SELECT, uses exactly its parameter) and run with the sample value. Returns an error text or null. */
+async function testNamed(dialect: Dialect, url: string, values: Record<string, string | null>): Promise<string | null> {
+  for (const n of NAMED) {
+    const q = values[n.key];
+    if (!q) continue;
+    try {
+      buildNamed(dialect, q, n.param, n.sample, 1);
+    } catch (e) {
+      return `${n.label}: ${e instanceof Error ? e.message : String(e)}`;
+    }
+    try {
+      const r = await testNamedQuery(dialect, url, q, n.param, n.sample);
+      const missing = missingColumns(r.columns, n.required);
+      if (missing.length) return `${n.label} nuk kthen kolonat: ${missing.join(", ")}.`;
+    } catch (e) {
+      return `${n.label} dështoi me :${n.param} = '${n.sample}': ${e instanceof Error ? e.message : String(e)}`.slice(0, 400);
+    }
+  }
+  return null;
+}
 
 export type SourceTest = { columns: string[]; sample: InventoryRow[]; skipped: number };
 
@@ -52,6 +94,14 @@ async function testInput(orgId: string, input: z.input<typeof sourceSchema>) {
   const parsed = sourceSchema.safeParse(input);
   if (!parsed.success) return { error: zodError(parsed.error) };
   const { dialect, query } = parsed.data;
+  const named = {
+    customerQuery: parsed.data.customerQuery || null,
+    historyQuery: parsed.data.historyQuery || null,
+    orderStatusQuery: parsed.data.orderStatusQuery || null,
+  };
+  if (named.historyQuery && !named.customerQuery) {
+    return { error: { ok: false as const, error: "Query i historikut kërkon edhe query-n e klientit (client_id vjen prej tij)." } };
+  }
   let url = parsed.data.url;
   if (!url) {
     const saved = await prisma.inventorySource.findUnique({ where: { organizationId: orgId }, select: { url: true } });
@@ -63,7 +113,9 @@ async function testInput(orgId: string, input: z.input<typeof sourceSchema>) {
     const result = await testSource(dialect, url, query);
     const missing = missingRequired(result.columns);
     if (missing.length) return { error: { ok: false as const, error: `Query nuk kthen kolonat: ${missing.join(", ")}.` } };
-    return { dialect, url, query, result };
+    const namedError = await testNamed(dialect, url, named);
+    if (namedError) return { error: { ok: false as const, error: namedError } };
+    return { dialect, url, query, named, result };
   } catch (e) {
     return { error: { ok: false as const, error: `Lidhja ose query dështoi: ${e instanceof Error ? e.message : String(e)}`.slice(0, 400) } };
   }
@@ -90,13 +142,14 @@ export async function saveInventorySource(input: z.input<typeof sourceSchema>): 
     dialect: t.dialect,
     url: encrypt(t.url),
     query: t.query,
+    ...t.named,
     columns: t.result.columns,
     isActive: true,
     lastError: null,
     lastCheckedAt: new Date(),
   };
   await prisma.inventorySource.upsert({ where: { organizationId: ctx.orgId }, create: { organizationId: ctx.orgId, ...data }, update: data });
-  await logActivity({ orgId: ctx.orgId, userId: ctx.user.id, action: "inventory_source.saved", entityType: "organization", entityId: ctx.orgId, meta: { dialect: t.dialect } });
+  await logActivity({ orgId: ctx.orgId, userId: ctx.user.id, action: "inventory_source.saved", entityType: "organization", entityId: ctx.orgId, meta: { dialect: t.dialect, customerQuery: Boolean(t.named.customerQuery), historyQuery: Boolean(t.named.historyQuery), orderStatusQuery: Boolean(t.named.orderStatusQuery) } });
   revalidatePath("/", "layout");
   return { ok: true, data: t.result };
 }

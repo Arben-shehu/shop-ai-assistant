@@ -2,6 +2,7 @@ import type { OrderStatus } from "@/generated/prisma/enums";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { OrderOpenButton, OrderRow } from "./order-sheet";
 import { OrderStatusBadge } from "./order-status-badge";
+import { orderRef } from "./order-status";
 
 export type OrderRowData = {
   id: string;
@@ -36,6 +37,7 @@ export function OrdersTable({ rows }: { rows: OrderRowData[] }) {
           <OrderRow key={o.id} id={o.id}>
             <TableCell className="pl-4">
               <OrderOpenButton id={o.id}>#{o.number}</OrderOpenButton>
+              <div className="text-muted-foreground font-mono text-[11px]">{orderRef(o.number)}</div>
             </TableCell>
             <TableCell>
               <div className="flex flex-col">

@@ -1,13 +1,18 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
+import type { OrderStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notify";
 import { publish } from "@/lib/events";
 import { logActivity } from "@/lib/activity";
 import { getShopSettings } from "@/lib/shop-settings";
+import { canTransition } from "@/components/orders/order-status";
 
 export const MAX_ORDER_LINES = 20;
 export const MAX_LINE_QUANTITY = 100;
+/** The same customer confirming the same lines again within this window gets the existing order back. */
+export const DUPLICATE_WINDOW_MS = 30 * 60_000;
 
 export type CreateOrderInput = {
   customerId: string;
@@ -30,7 +35,8 @@ export type CreateOrderError =
   | { code: "INVALID_INPUT"; message: string }
   | { code: "CUSTOMER_NOT_FOUND" }
   | { code: "PRODUCT_NOT_FOUND"; productIds: string[] }
-  | { code: "OUT_OF_STOCK"; items: { productId: string; name: string; requested: number; available: number }[] };
+  | { code: "OUT_OF_STOCK"; items: { productId: string; name: string; requested: number; available: number }[] }
+  | { code: "DUPLICATE"; orderId: string; number: number; total: string };
 
 export type CreateOrderResult = { ok: true; order: CreatedOrder } | { ok: false; error: CreateOrderError };
 
@@ -59,16 +65,32 @@ export async function createOrder(orgId: string, input: CreateOrderInput): Promi
   for (const q of qty.values()) if (q > MAX_LINE_QUANTITY) return invalid(`at most ${MAX_LINE_QUANTITY} units per product`);
 
   const productIds = [...qty.keys()];
+  const itemsHash = hashItems(qty);
   let order: CreatedOrder;
   let customerName: string | null = null;
   try {
     order = await prisma.$transaction(async (tx) => {
+      // Serialise order creation per customer so two deliveries of the same confirmation cannot both pass the check.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.customerId}))`;
       const customer = await tx.customer.findFirst({
         where: { id: input.customerId, organizationId: orgId },
         select: { id: true, name: true, address: true },
       });
       if (!customer) throw new OrderAbort({ code: "CUSTOMER_NOT_FOUND" });
       customerName = customer.name;
+
+      const same = await tx.order.findFirst({
+        where: {
+          organizationId: orgId,
+          customerId: customer.id,
+          itemsHash,
+          status: { not: "CANCELLED" },
+          createdAt: { gte: new Date(Date.now() - DUPLICATE_WINDOW_MS) },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, number: true, total: true },
+      });
+      if (same) throw new OrderAbort({ code: "DUPLICATE", orderId: same.id, number: same.number, total: same.total.toFixed(2) });
 
       let conversationId: string | null = null;
       if (input.conversationId) {
@@ -120,6 +142,7 @@ export async function createOrder(orgId: string, input: CreateOrderInput): Promi
           total,
           deliveryAddress: clean(input.deliveryAddress, 500) ?? customer.address ?? null,
           notes: clean(input.notes, 1000),
+          itemsHash,
           items: {
             create: lines.map((l) => ({ productId: l.productId, name: l.name, quantity: l.quantity, unitPrice: l.unitPrice })),
           },
@@ -168,6 +191,70 @@ export async function createOrder(orgId: string, input: CreateOrderInput): Promi
   });
 
   return { ok: true, order };
+}
+
+/** sha256 of the merged lines, sorted: "productId:qty" joined by newlines. */
+export function hashItems(qty: Map<string, number>): string {
+  const lines = [...qty].map(([id, q]) => `${id}:${q}`).sort();
+  return createHash("sha256").update(lines.join("\n")).digest("hex");
+}
+
+export type StatusChangeResult =
+  | { ok: true; from: OrderStatus; restocked: boolean }
+  | { ok: false; code: "NOT_FOUND" | "ALREADY_CANCELLED" | "BAD_TRANSITION" | "CHANGED"; from?: OrderStatus };
+
+/**
+ * Change an order's status in one transaction: conditional on the status read (a double submit cannot apply or restock
+ * twice); cancelling a not-yet-delivered order puts its items back in stock. Publishes the live event and logs activity.
+ * `anyStep` lets the ERP sync jump forward (PENDING -> DELIVERED) or move to any status; staff use single steps.
+ */
+export async function setOrderStatus(
+  orgId: string,
+  orderId: string,
+  to: OrderStatus,
+  opts: { userId?: string | null; anyStep?: boolean; data?: Prisma.OrderUpdateManyMutationInput; meta?: Record<string, string | null> } = {},
+): Promise<StatusChangeResult> {
+  let res: StatusChangeResult;
+  try {
+    res = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { id: orderId, organizationId: orgId },
+        select: { status: true, items: { select: { productId: true, quantity: true } } },
+      });
+      if (!order) return { ok: false, code: "NOT_FOUND" } as const;
+      if (order.status === "CANCELLED") return { ok: false, code: "ALREADY_CANCELLED", from: order.status } as const;
+      if (order.status === to || (!opts.anyStep && !canTransition(order.status, to))) {
+        return { ok: false, code: "BAD_TRANSITION", from: order.status } as const;
+      }
+      const updated = await tx.order.updateMany({
+        where: { id: orderId, organizationId: orgId, status: order.status },
+        data: { ...opts.data, status: to },
+      });
+      if (updated.count !== 1) throw new OrderAbort({ code: "INVALID_INPUT", message: "changed" });
+      const restocked = to === "CANCELLED" && order.status !== "DELIVERED";
+      if (restocked) {
+        for (const item of order.items) {
+          if (!item.productId) continue;
+          await tx.product.updateMany({ where: { id: item.productId, organizationId: orgId }, data: { stock: { increment: item.quantity } } });
+        }
+      }
+      return { ok: true, from: order.status, restocked } as const;
+    });
+  } catch (e) {
+    if (e instanceof OrderAbort) return { ok: false, code: "CHANGED" };
+    throw e;
+  }
+  if (!res.ok) return res;
+  publish(orgId, { type: "order", orderId });
+  await logActivity({
+    orgId,
+    userId: opts.userId ?? null,
+    action: "order.status_changed",
+    entityType: "order",
+    entityId: orderId,
+    meta: { from: res.from, to, restocked: res.restocked, ...opts.meta },
+  });
+  return res;
 }
 
 function invalid(message: string): CreateOrderResult {

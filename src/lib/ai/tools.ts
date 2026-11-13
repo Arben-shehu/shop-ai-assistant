@@ -9,6 +9,8 @@ import { logActivity } from "@/lib/activity";
 import { createOrder, MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "@/lib/orders";
 import { searchTermGroups, termVariants } from "@/lib/ai/search-terms";
 import { InventoryUnavailable, liveSearch, refreshProducts } from "@/lib/inventory/source";
+import { identifyCustomer, type ErpIdentity } from "@/lib/inventory/customer";
+import { orderRef } from "@/components/orders/order-status";
 
 /**
  * Everything a tool may touch comes from here — never from model input. The model can only name products
@@ -290,10 +292,9 @@ async function searchProducts(ctx: ToolContext, input: Input<"search_products">)
 
   const groups = searchTermGroups(input.query);
   // Shops with their own DB: only rows read live in this call (mirrored into Product) may be returned.
-  const liveIds = await liveSearch(ctx.orgId, [
-    ...groups.flat(),
-    ...(input.category?.trim() ? termVariants(input.category) : []),
-    ...(input.brand?.trim() ? [input.brand.trim()] : []),
+  const liveIds = await liveSearch(ctx.orgId, groups, [
+    ...(input.category?.trim() ? [termVariants(input.category)] : []),
+    ...(input.brand?.trim() ? [[input.brand.trim()]] : []),
   ]);
   if (liveIds) base.push({ id: { in: liveIds } });
   const hasFilter = base.length > 2;
@@ -366,7 +367,47 @@ async function getProduct(ctx: ToolContext, productId: string): Promise<ToolOutc
   return ok({ ...summary(p, ctx.currency), specs: attrs(p.attributes, 30), description: p.description?.slice(0, 1000) });
 }
 
+/** What the model may know about the ERP side. Only an exactly-one match carries account data. */
+function erpView(id: ErpIdentity): Record<string, unknown> {
+  switch (id.kind) {
+    case "off":
+      return {};
+    case "anonymous":
+      return id.reason === "web"
+        ? {
+            identified: false,
+            anonymous: true,
+            note:
+              "This visitor writes from the website chat and is anonymous: you can only help with the catalogue (products, prices, " +
+              "availability). Do not discuss any account, invoice, debt or past order. If they are a client and need account-specific " +
+              "help, tell them to continue on WhatsApp (the link is in the chat window) where they are recognised by their number.",
+          }
+        : { identified: false, anonymous: true, note: "Not recognised as a client: catalogue help only, no account information." };
+    case "none":
+      return {
+        identified: false,
+        note: "This phone number is not registered to any client in the shop's system. Help with the catalogue; do not discuss account data.",
+      };
+    case "many":
+      return {
+        identified: false,
+        note:
+          "This phone number belongs to more than one client in the shop's system, so you cannot tell which account it is. Do not " +
+          "discuss account data (invoices, debt, past orders). If the customer needs account-specific information, call handoff_to_human.",
+      };
+    case "one":
+      return {
+        identified: true,
+        erpClient: id.client,
+        erpHistory: id.history ?? undefined,
+        note: "Recognised client of the shop (by their WhatsApp number). erpHistory = their recent invoices/orders in the shop's system.",
+      };
+  }
+}
+
 async function getCustomer(ctx: ToolContext): Promise<ToolOutcome> {
+  // First: may fill name/address from the ERP, which the payload below then shows.
+  const erp = erpView(await identifyCustomer(ctx.orgId, ctx.conversationId, ctx.customerId));
   const c = await prisma.customer.findFirst({
     where: { id: ctx.customerId, organizationId: ctx.orgId },
     select: {
@@ -389,11 +430,13 @@ async function getCustomer(ctx: ToolContext): Promise<ToolOutcome> {
     address: c.address,
     lastOrders: c.orders.map((o) => ({
       number: o.number,
+      reference: orderRef(o.number),
       status: o.status,
       total: `${o.total.toFixed(2)} ${ctx.currency}`,
       date: o.createdAt.toISOString().slice(0, 10),
       items: o.items.map((i) => `${i.quantity} x ${i.name}`),
     })),
+    ...erp,
   });
 }
 
@@ -414,10 +457,17 @@ async function placeOrder(ctx: ToolContext, input: Input<"create_order">): Promi
   if (ctx.state.orderIds.length > 0) {
     return fail("An order was already created in this reply. Do not create it twice; tell the customer the order number.");
   }
-  const customer = await prisma.customer.findFirst({
+  let customer = await prisma.customer.findFirst({
     where: { id: ctx.customerId, organizationId: ctx.orgId },
     select: { name: true },
   });
+  if (customer && !customer.name) {
+    // A recognised WhatsApp client (ERP) needs no name question: the lookup fills it from their record.
+    const id = await identifyCustomer(ctx.orgId, ctx.conversationId, ctx.customerId);
+    if (id.kind === "one") {
+      customer = await prisma.customer.findFirst({ where: { id: ctx.customerId, organizationId: ctx.orgId }, select: { name: true } });
+    }
+  }
   if (!customer?.name) {
     return fail("The customer's name is unknown. Ask for their name, save it with save_customer_details, then create the order.");
   }
@@ -440,6 +490,8 @@ async function placeOrder(ctx: ToolContext, input: Input<"create_order">): Promi
     return ok({
       created: true,
       orderNumber: o.number,
+      reference: orderRef(o.number),
+      instruction: `Tell the customer the order reference ${orderRef(o.number)} and the total.`,
       total: `${o.total} ${ctx.currency}`,
       items: o.items.map((i) => ({ name: i.name, quantity: i.quantity, unitPrice: `${i.unitPrice} ${ctx.currency}`, lineTotal: `${i.lineTotal} ${ctx.currency}` })),
       deliveryAddress: o.deliveryAddress,
@@ -460,6 +512,18 @@ async function placeOrder(ctx: ToolContext, input: Input<"create_order">): Promi
       return fail("Customer not found.");
     case "INVALID_INPUT":
       return fail(`INVALID_INPUT: ${e.message}`);
+    case "DUPLICATE":
+      // Not an error: the confirmation arrived twice (or the model retried). Nothing new was created.
+      return ok({
+        created: false,
+        alreadyPlaced: true,
+        orderNumber: e.number,
+        reference: orderRef(e.number),
+        total: `${e.total} ${ctx.currency}`,
+        instruction:
+          `This exact order was already placed a few minutes ago as ${orderRef(e.number)}. Do not call create_order again for it; ` +
+          "tell the customer it is already registered with that reference.",
+      });
   }
 }
 
@@ -483,6 +547,7 @@ async function getOrderStatus(ctx: ToolContext, orderNumber?: number): Promise<T
   return ok({
     orders: orders.map((o) => ({
       number: o.number,
+      reference: orderRef(o.number),
       status: o.status,
       total: `${o.total.toFixed(2)} ${ctx.currency}`,
       date: o.createdAt.toISOString().slice(0, 10),

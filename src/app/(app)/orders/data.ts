@@ -49,7 +49,7 @@ export function baseOrderWhere(orgId: string, f: Pick<OrderFilters, "q" | "perio
       { customer: { phone: { contains: f.q } } },
       { customer: { externalId: { contains: f.q } } },
     ];
-    const num = f.q.replace(/^#/, "");
+    const num = f.q.replace(/^(#|ai-)/i, ""); // "#1042" or the ERP reference "AI-1042"
     if (/^\d{1,9}$/.test(num)) or.push({ number: Number(num) });
     where.OR = or;
   }
@@ -106,7 +106,7 @@ export async function getOrderDetail(orgId: string, orderId: string, currency: s
   const o = await prisma.order.findFirst({
     where: { id: orderId, organizationId: orgId },
     include: {
-      customer: { select: { name: true, phone: true, externalId: true } },
+      customer: { select: { name: true, phone: true, externalId: true, externalRef: true } },
       conversation: { select: { id: true, channel: { select: { type: true } } } },
       items: { orderBy: { id: "asc" } },
     },
@@ -123,9 +123,12 @@ export async function getOrderDetail(orgId: string, orderId: string, currency: s
     notes: o.notes,
     channelLabel: o.conversation ? CHANNEL_LABEL[o.conversation.channel.type] ?? null : null,
     conversationId: o.conversation?.id ?? null,
+    externalStatus: o.externalStatus,
+    syncedLabel: o.syncedAt ? formatDate(o.syncedAt, { time: true }) : null,
     customer: {
       name: o.customer.name,
       phone: customerPhone(o.customer, o.conversation?.channel.type),
+      externalRef: o.customer.externalRef,
     },
     items: o.items.map((i) => ({
       id: i.id,
