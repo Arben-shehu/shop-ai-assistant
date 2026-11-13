@@ -10,7 +10,9 @@ import type { LiveEvent } from "@/lib/events";
 export function useLiveEvents(opts: { filter?: (e: LiveEvent) => boolean; onEvent?: (e: LiveEvent) => void } = {}) {
   const router = useRouter();
   const ref = useRef(opts);
-  ref.current = opts;
+  useEffect(() => {
+    ref.current = opts;
+  });
   useEffect(() => {
     const es = new EventSource("/api/events");
     es.onmessage = (m) => {

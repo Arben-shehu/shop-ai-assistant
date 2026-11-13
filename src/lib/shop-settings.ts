@@ -28,9 +28,8 @@ export async function getShopSettings(orgId: string) {
 }
 
 export async function saveShopSettings(orgId: string, patch: Partial<ShopSettings>) {
-  const current = await getShopSettings(orgId);
-  const { name: _name, ...settings } = current;
-  const next = shopSettingsSchema.parse({ ...settings, ...patch });
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: orgId }, select: { metadata: true } });
+  const next = shopSettingsSchema.parse({ ...parseShopSettings(org.metadata), ...patch });
   await prisma.organization.update({ where: { id: orgId }, data: { metadata: JSON.stringify(next) } });
   return next;
 }
