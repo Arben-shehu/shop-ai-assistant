@@ -1,0 +1,210 @@
+# Shop AI assistant — STAGING on the shared staging k3s VPS (same cluster as gvs-staging, separate namespace,
+# nothing shared with GVS). Public URL: https://ai.square.al
+#
+# Deploy with k8s/deploy-staging.sh (it substitutes __IMAGE_TAG__, creates the Secret, applies this file).
+# Do not `kubectl apply -f` this file by hand: the image tag placeholder below is not a real tag.
+#
+# The shop-ai-env Secret is NOT kept in git. It is created from k8s/.env.staging (gitignored; template:
+# k8s/staging.env.example) by the deploy script:
+#   kubectl -n shop-ai-staging create secret generic shop-ai-env --from-env-file=... --dry-run=client -o yaml \
+#     | kubectl apply -f -
+#
+# WhatsApp (OpenWA) is intentionally NOT deployed on staging (like GVS staging): OPENWA_URL stays empty, so no
+# session can be paired and nothing reaches real customers. To add it later:
+#   1. build docker/openwa (see docker-compose.yml) for linux/amd64 and push it as
+#      localhost:5000/shop-ai/openwa:<tag> through the same tunnel as the app image;
+#   2. add a StatefulSet `openwa` here (1 replica, PVC ~2Gi mounted at /app/data, the env block of the
+#      compose service, a 1Gi emptyDir with medium: Memory mounted at /dev/shm, memory request 1Gi / limit 2Gi:
+#      check free RAM/disk on the shared VPS first) plus a ClusterIP Service on port 2785;
+#   3. set OPENWA_URL=http://openwa:2785 and OPENWA_WEBHOOK_URL=http://app/api/webhooks/openwa in .env.staging,
+#      and OPENWA_API_KEY from `kubectl exec openwa-0 -- cat /app/data/.api-key` after the first boot.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop-ai-staging
+  labels:
+    environment: staging
+
+---
+# ─── Postgres ─────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: shop-ai-staging
+spec:
+  clusterIP: None # headless, governs the StatefulSet; DNS name `postgres` resolves to the pod
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: shop-ai-staging
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: shop-ai-env
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-ai-env
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: shop-ai-env
+                  key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"']
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 2Gi
+
+---
+# ─── App (Next.js standalone, port 4710) ──────────────────────────────────────
+# MUST stay at exactly 1 replica with Recreate: background workers (outbox, channel monitors), the SSE event
+# bus and the rate limiters all live in-process. Two pods would double-send and split the event stream.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: shop-ai-staging
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: app
+          image: localhost:5000/shop-ai/app:__IMAGE_TAG__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4710
+          envFrom:
+            - secretRef:
+                name: shop-ai-env
+          # The entrypoint runs `prisma migrate deploy` before `node server.js`; the startup probe gives it time.
+          startupProbe:
+            httpGet:
+              path: /login
+              port: 4710
+            periodSeconds: 5
+            failureThreshold: 36 # 3 minutes
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 4710
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: 4710
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 4
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: shop-ai-staging
+spec:
+  selector:
+    app: app
+  ports:
+    - port: 80
+      targetPort: 4710
+
+---
+# ─── Ingress ──────────────────────────────────────────────────────────────────
+# DNS: Cloudflare A record ai.square.al -> 157.180.46.100, DNS only (grey cloud), so cert-manager's HTTP-01
+# challenge reaches Traefik directly.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop-ai-ingress
+  namespace: shop-ai-staging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+  labels:
+    environment: staging
+    managed-by: kubectl
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - ai.square.al
+      secretName: ai-square-al-tls
+  rules:
+    - host: ai.square.al
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80

@@ -1,0 +1,20 @@
+# Docker build context for the app image (Dockerfile). Patterns here are anchored at the context root,
+# so `**/` is needed to match nested files (e.g. k8s/.env.staging).
+**/node_modules
+**/.next
+**/.env*
+!.env.example
+.git
+.gitignore
+.claude
+.agents
+k8s
+docker/openwa
+src/generated
+coverage
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+Dockerfile
+.dockerignore
+docker-compose.yml
