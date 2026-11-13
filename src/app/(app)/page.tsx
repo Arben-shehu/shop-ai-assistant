@@ -1,22 +1,41 @@
 import { SkeletonSuspense } from "skullet/react";
 import { PageHeader } from "@/components/page-header";
-import { prisma } from "@/lib/prisma";
 import { requireOrg } from "@/lib/session";
+import { LiveRefresh } from "@/components/dashboard/live-refresh";
+import {
+  AttentionList,
+  AttentionSection,
+  ChartCard,
+  ChartSection,
+  KpiSection,
+  KpiTiles,
+  LatestOrders,
+  LatestOrdersSection,
+  SAMPLE_CONVS,
+  SAMPLE_KPIS,
+  SAMPLE_ORDERS,
+} from "@/components/dashboard/sections";
 
-async function ProductCount({ orgId }: { orgId: string }) {
-  const n = await prisma.product.count({ where: { organizationId: orgId } });
-  return <p className="text-sm">Produkte: {n}</p>;
-}
-
-// Placeholder: replaced by the dashboard agent.
 export default async function DashboardPage() {
   const { orgId } = await requireOrg();
   return (
     <>
-      <PageHeader title="Paneli" />
-      <SkeletonSuspense id="dash-count" skeleton={<p className="text-sm">Produkte: 00</p>}>
-        <ProductCount orgId={orgId} />
+      <LiveRefresh types={["order", "conversation", "message"]} />
+      <PageHeader title="Paneli" description="Pamje e shpejtë e dyqanit sot" />
+      <SkeletonSuspense id="dash-kpis" skeleton={<KpiTiles k={SAMPLE_KPIS} />}>
+        <KpiSection orgId={orgId} />
       </SkeletonSuspense>
+      <SkeletonSuspense id="dash-chart" skeleton={<ChartCard data={null} />}>
+        <ChartSection orgId={orgId} />
+      </SkeletonSuspense>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
+        <SkeletonSuspense id="dash-orders" skeleton={<LatestOrders rows={SAMPLE_ORDERS} />}>
+          <LatestOrdersSection orgId={orgId} />
+        </SkeletonSuspense>
+        <SkeletonSuspense id="dash-attention" skeleton={<AttentionList rows={SAMPLE_CONVS} />}>
+          <AttentionSection orgId={orgId} />
+        </SkeletonSuspense>
+      </div>
     </>
   );
 }
