@@ -459,13 +459,14 @@ async function placeOrder(ctx: ToolContext, input: Input<"create_order">): Promi
   }
   let customer = await prisma.customer.findFirst({
     where: { id: ctx.customerId, organizationId: ctx.orgId },
-    select: { name: true },
+    select: { name: true, externalRef: true },
   });
-  if (customer && !customer.name) {
-    // A recognised WhatsApp client (ERP) needs no name question: the lookup fills it from their record.
+  if (customer && (!customer.name || !customer.externalRef)) {
+    // Shops with an ERP: a recognised WhatsApp client needs no name question (filled from their record), and the
+    // order must carry their ERP client id for staff even when the model never called get_customer.
     const id = await identifyCustomer(ctx.orgId, ctx.conversationId, ctx.customerId);
-    if (id.kind === "one") {
-      customer = await prisma.customer.findFirst({ where: { id: ctx.customerId, organizationId: ctx.orgId }, select: { name: true } });
+    if (id.kind === "one" && !customer.name) {
+      customer = await prisma.customer.findFirst({ where: { id: ctx.customerId, organizationId: ctx.orgId }, select: { name: true, externalRef: true } });
     }
   }
   if (!customer?.name) {

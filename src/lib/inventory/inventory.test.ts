@@ -370,6 +370,12 @@ describe("pharma ERP (Postgres)", { skip: !PHARMA_URL && "PHARMA_TEST_URL not se
     assert.equal(saved.externalRef, "4");
     const again = await call("create_order", { items: [{ productId: item.id, quantity: 2 }] }, ctx());
     assert.equal(again.alreadyPlaced, true);
+    // A WhatsApp profile name is kept, but the order still gets the ERP client id for staff.
+    const named = await shop.chat("355690001006", "wa", { name: "Profili WA" });
+    await call("create_order", { items: [{ productId: item.id, quantity: 1 }] }, named.ctx());
+    const n = await prisma.customer.findUniqueOrThrow({ where: { id: named.customer.id } });
+    assert.equal(n.name, "Profili WA");
+    assert.equal(n.externalRef, "6");
     assert.equal(again.reference, order.reference);
     assert.equal(await prisma.order.count({ where: { customerId: customer.id } }), 1);
   });
