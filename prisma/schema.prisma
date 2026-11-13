@@ -225,6 +225,16 @@ enum MessageDirection {
   OUTBOUND
 }
 
+// Outbound messages are a durable outbox (pattern proven in SunEasy's WhatsAppQueueWorker):
+// QUEUED -> claimed atomically as SENDING -> SENT, or back to QUEUED with backoff, FAILED after maxAttempts.
+enum MessageStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RECEIVED // inbound
+}
+
 enum MessageSender {
   CUSTOMER
   AI
@@ -243,11 +253,15 @@ model Message {
   mediaUrl       String?
   mediaType      String?
   externalId     String? // provider message id, used to drop duplicate webhooks
-  error          String? // set when sending failed
+  status         MessageStatus    @default(RECEIVED)
+  attempts       Int              @default(0)
+  nextAttemptAt  DateTime? // outbox: when the worker may (re)try
+  error          String? // last send error
   createdAt      DateTime         @default(now())
 
   @@unique([conversationId, externalId])
   @@index([conversationId, createdAt])
+  @@index([status, nextAttemptAt])
 }
 
 model Product {
