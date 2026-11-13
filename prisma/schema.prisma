@@ -170,6 +170,7 @@ model Channel {
   externalId     String
   credentials    String? // AES-256-GCM encrypted JSON, see src/lib/crypto.ts
   status         ChannelStatus  @default(PENDING)
+  phone          String? // our own WhatsApp number (digits), for wa.me links in the web widget
   isActive       Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -187,6 +188,7 @@ model Customer {
   name           String?
   phone          String?
   address        String?
+  externalRef    String? // client id in the shop's own DB (ERP), set when the phone matched exactly one client
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   conversations  Conversation[]
@@ -282,6 +284,10 @@ model InventorySource {
   url            String // AES-256-GCM encrypted connection string
   query          String // admin-written SELECT returning sku, name, price, stock (+ optional columns)
   columns        String[] // column names the query returned at the last successful test
+  // Optional named queries, admin-written, with bound params (never model-written):
+  customerQuery    String? // :phone (last 9 digits) -> client_id, name, (address, nipt, balance, ...)
+  historyQuery     String? // :client_id -> the client's recent invoices/orders
+  orderStatusQuery String? // :ref (our "AI-<number>") -> status (PENDING|CONFIRMED|PREPARING|DELIVERED|CANCELLED)
   isActive       Boolean          @default(true)
   lastError      String?
   lastCheckedAt  DateTime?
@@ -332,11 +338,15 @@ model Order {
   total           Decimal       @db.Decimal(10, 2)
   deliveryAddress String?
   notes           String?
+  itemsHash       String? // sha256 of sorted productId:qty, used to refuse a repeated confirmation of the same order
+  externalStatus  String? // status read back from the shop's DB (orderStatusQuery)
+  syncedAt        DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   items           OrderItem[]
 
   @@unique([number])
+  @@index([customerId, itemsHash])
   @@index([organizationId, createdAt])
 }
 
