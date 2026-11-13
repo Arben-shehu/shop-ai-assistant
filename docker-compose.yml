@@ -1,0 +1,59 @@
+# Local services for the shop AI assistant.
+#
+#   docker compose up -d --build openwa
+#
+# OpenWA = unofficial self-hosted WhatsApp gateway (whatsapp-web.js + Chromium), built the way SunEasy runs
+# it in production: docker/openwa/Dockerfile clones the DriniNazeraj/whatsApp-comment fork at a pinned commit
+# and applies 3 patches (send never 500s on a missing message model, WA Web build pinned via
+# webVersionCache 'none', GetSerialized helper for WA's `_serialized` rename).
+#
+# API: http://127.0.0.1:2785/api (header X-API-Key). API_MASTER_KEY is IGNORED by this gateway: on first boot
+# it generates a key into /app/data/.api-key (in the volume). Copy it into .env as OPENWA_API_KEY:
+#
+#   docker compose exec openwa cat /app/data/.api-key
+#
+# If the volume is deleted a NEW key is generated and .env must be updated again.
+# Webhooks are registered per session by the app (src/lib/channels/openwa.ts) and re-checked by a reconciler;
+# they are signed with OPENWA_WEBHOOK_SECRET (X-OpenWA-Signature: sha256=<hex>). The container reaches the
+# Next.js app on the host through host.docker.internal.
+# Anti-ban send pacing is done app-side by the outbox worker (src/lib/channels/outbox.ts): this gateway
+# version has no built-in pacing.
+services:
+  openwa:
+    build: ./docker/openwa
+    image: shop-ai/openwa:980d300
+    container_name: shop-ai-openwa
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:2785:2785"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - openwa-data:/app/data
+    # Chromium leans on shared memory; SunEasy raised it to 1Gi after crashes under load.
+    shm_size: "1gb"
+    mem_limit: 2g
+    mem_reservation: 1g
+    cap_add:
+      - SYS_RESOURCE
+    environment:
+      # production => random API key written to /app/data/.api-key (development seeds a fixed dev key)
+      - NODE_ENV=production
+      - PORT=2785
+      - LOG_LEVEL=info
+      - ENGINE_TYPE=whatsapp-web.js
+      - SESSION_DATA_PATH=/app/data/sessions
+      - PUPPETEER_HEADLESS=true
+      - PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+      - STORAGE_TYPE=local
+      - STORAGE_LOCAL_PATH=/app/data/media
+      - DATABASE_TYPE=sqlite
+      - DATABASE_NAME=/app/data/openwa.sqlite
+      - DATABASE_SYNCHRONIZE=true
+      - WEBHOOK_TIMEOUT=10000
+      - WEBHOOK_MAX_RETRIES=3
+      - WEBHOOK_RETRY_DELAY=5000
+      - PLUGINS_ENABLED=false
+
+volumes:
+  openwa-data:
