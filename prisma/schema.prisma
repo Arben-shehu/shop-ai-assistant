@@ -1,0 +1,394 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String              @id
+  name                  String
+  email                 String
+  emailVerified         Boolean             @default(false)
+  image                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  role                  String?
+  banned                Boolean?            @default(false)
+  banReason             String?
+  banExpires            DateTime?
+  sessions              Session[]
+  accounts              Account[]
+  members               Member[]
+  invitations           Invitation[]
+  assignedConversations Conversation[]      @relation("assignee")
+  sentMessages          Message[]
+  tickets               HelpTicket[]
+  ticketMessages        HelpTicketMessage[]
+  notifications         Notification[]
+  activityLogs          ActivityLog[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+  impersonatedBy       String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Organization {
+  id            String         @id
+  name          String
+  slug          String
+  logo          String?
+  createdAt     DateTime
+  metadata      String?
+  members       Member[]
+  invitations   Invitation[]
+  channels      Channel[]
+  customers     Customer[]
+  conversations Conversation[]
+  products      Product[]
+  orders        Order[]
+  tickets       HelpTicket[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+}
+
+// ============================================================================
+// SHOP DOMAIN — every row is scoped by organizationId (one org = one shop)
+// ============================================================================
+
+enum ChannelType {
+  WHATSAPP_OPENWA // unofficial gateway (OpenWA), externalId = OpenWA session id
+  WHATSAPP_META // official Cloud API, externalId = phone_number_id
+  INSTAGRAM // Meta Instagram API, externalId = IG account id
+}
+
+enum ChannelStatus {
+  PENDING // created, not yet connected (e.g. QR not scanned)
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+model Channel {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           ChannelType
+  name           String
+  externalId     String
+  credentials    String? // AES-256-GCM encrypted JSON, see src/lib/crypto.ts
+  status         ChannelStatus  @default(PENDING)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  conversations  Conversation[]
+
+  @@unique([type, externalId])
+  @@index([organizationId])
+}
+
+model Customer {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  externalId     String // phone (E.164 digits) for WhatsApp, IGSID for Instagram
+  name           String?
+  phone          String?
+  address        String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  conversations  Conversation[]
+  orders         Order[]
+
+  @@unique([organizationId, externalId])
+}
+
+enum ConversationMode {
+  AI // assistant answers
+  HUMAN // operator took over, AI is silent
+  CLOSED
+}
+
+model Conversation {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channelId      String
+  channel        Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  mode           ConversationMode @default(AI)
+  assigneeId     String?
+  assignee       User?            @relation("assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  unreadCount    Int              @default(0)
+  lastMessageAt  DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  messages       Message[]
+  orders         Order[]
+
+  @@unique([channelId, customerId])
+  @@index([organizationId, lastMessageAt])
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageSender {
+  CUSTOMER
+  AI
+  OPERATOR
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      MessageDirection
+  sender         MessageSender
+  operatorId     String?
+  operator       User?            @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  text           String?
+  mediaUrl       String?
+  mediaType      String?
+  externalId     String? // provider message id, used to drop duplicate webhooks
+  error          String? // set when sending failed
+  createdAt      DateTime         @default(now())
+
+  @@unique([conversationId, externalId])
+  @@index([conversationId, createdAt])
+}
+
+model Product {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sku            String
+  price          Decimal      @db.Decimal(10, 2)
+  stock          Int          @default(0)
+  category       String?
+  brand          String?
+  description    String?
+  imageUrl       String?
+  attributes     Json? // free-form specs: { "RAM": "16GB" } or { "Dosage": "500mg" }
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  orderItems     OrderItem[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId, name])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  number          Int           @default(autoincrement())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  conversationId  String?
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status          OrderStatus   @default(PENDING)
+  total           Decimal       @db.Decimal(10, 2)
+  deliveryAddress String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  items           OrderItem[]
+
+  @@unique([number])
+  @@index([organizationId, createdAt])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String // snapshot at order time
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2)
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Shop -> platform support tickets
+model HelpTicket {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  subject        String
+  status         TicketStatus        @default(OPEN)
+  priority       TicketPriority      @default(MEDIUM)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  messages       HelpTicketMessage[]
+
+  @@index([organizationId])
+}
+
+model HelpTicketMessage {
+  id        String     @id @default(cuid())
+  ticketId  String
+  ticket    HelpTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime   @default(now())
+}
+
+enum NotificationType {
+  NEW_ORDER
+  HUMAN_NEEDED // AI handed the conversation to an operator
+  CHANNEL_ERROR
+  TICKET_REPLY
+  SYSTEM
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  organizationId String?
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String? // null = everyone in the organization
+  user           User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  title          String
+  body           String?
+  link           String?
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([userId, readAt])
+}
+
+model ActivityLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String // e.g. "order.status_changed", "product.created"
+  entityType     String?
+  entityId       String?
+  meta           Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+}

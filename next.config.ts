@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // cacheComponents left off: every page is per-user/per-shop, nothing worth prerendering.
   turbopack: {
     rules: {
       "*.css": {

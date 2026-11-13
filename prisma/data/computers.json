@@ -1,0 +1,1247 @@
+[
+ {
+  "name": "Lenovo ThinkPad X1 Carbon Gen 11",
+  "sku": "LAP-LEN-X1C-G11-I7",
+  "price": 1499.99,
+  "stock": 8,
+  "category": "Laptop",
+  "brand": "Lenovo",
+  "description": "Lenovo ThinkPad X1 Carbon Gen 11 business ultrabook with Intel i7, 16GB RAM, 512GB SSD, OLED display",
+  "attributes": {
+   "CPU": "Intel Core i7-1365U",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "14\" 2.8K OLED",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Lenovo ThinkPad T14 Gen 4",
+  "sku": "LAP-LEN-T14-G4-I5",
+  "price": 999.99,
+  "stock": 12,
+  "category": "Laptop",
+  "brand": "Lenovo",
+  "description": "Lenovo ThinkPad T14 Gen 4 professional laptop with Intel i5, 16GB RAM, 256GB SSD",
+  "attributes": {
+   "CPU": "Intel Core i5-1345U",
+   "RAM": "16GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "14\" FHD IPS",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Lenovo IdeaPad Gaming 3",
+  "sku": "LAP-LEN-IDEA-GAM3-R5",
+  "price": 799.99,
+  "stock": 15,
+  "category": "Laptop",
+  "brand": "Lenovo",
+  "description": "Lenovo IdeaPad Gaming 3 with AMD Ryzen 5, RTX 3050, 16GB RAM, gaming laptop",
+  "attributes": {
+   "CPU": "AMD Ryzen 5 6600H",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "NVIDIA RTX 3050",
+   "Display": "15.6\" FHD 120Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Lenovo Legion 5 Pro",
+  "sku": "LAP-LEN-LEG5P-R7",
+  "price": 1399.99,
+  "stock": 6,
+  "category": "Laptop",
+  "brand": "Lenovo",
+  "description": "Lenovo Legion 5 Pro gaming laptop with AMD Ryzen 7, RTX 4060, 32GB RAM, 165Hz display",
+  "attributes": {
+   "CPU": "AMD Ryzen 7 7745HX",
+   "RAM": "32GB",
+   "Storage": "1TB SSD",
+   "GPU": "NVIDIA RTX 4060",
+   "Display": "16\" QHD 165Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Lenovo ThinkPad E14 Gen 5",
+  "sku": "LAP-LEN-E14-G5-I5",
+  "price": 649.99,
+  "stock": 20,
+  "category": "Laptop",
+  "brand": "Lenovo",
+  "description": "Lenovo ThinkPad E14 Gen 5 budget business laptop with Intel i5, 8GB RAM",
+  "attributes": {
+   "CPU": "Intel Core i5-1335U",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "14\" FHD",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "HP EliteBook 840 G10",
+  "sku": "LAP-HP-EB840-G10-I7",
+  "price": 1299.99,
+  "stock": 10,
+  "category": "Laptop",
+  "brand": "HP",
+  "description": "HP EliteBook 840 G10 premium business laptop with Intel i7, 16GB RAM, 512GB SSD",
+  "attributes": {
+   "CPU": "Intel Core i7-1365U",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "14\" FHD IPS",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "HP ProBook 450 G10",
+  "sku": "LAP-HP-PB450-G10-I5",
+  "price": 749.99,
+  "stock": 18,
+  "category": "Laptop",
+  "brand": "HP",
+  "description": "HP ProBook 450 G10 business laptop with Intel i5, 8GB RAM, 256GB SSD",
+  "attributes": {
+   "CPU": "Intel Core i5-1335U",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "15.6\" FHD",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "HP Victus 16 Gaming",
+  "sku": "LAP-HP-VICT16-I7-RTX",
+  "price": 1099.99,
+  "stock": 8,
+  "category": "Laptop",
+  "brand": "HP",
+  "description": "HP Victus 16 gaming laptop with Intel i7, RTX 4050, 16GB RAM, 144Hz display",
+  "attributes": {
+   "CPU": "Intel Core i7-13700H",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "NVIDIA RTX 4050",
+   "Display": "16.1\" FHD 144Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "HP Omen 17",
+  "sku": "LAP-HP-OMEN17-I9-RTX",
+  "price": 2199.99,
+  "stock": 4,
+  "category": "Laptop",
+  "brand": "HP",
+  "description": "HP Omen 17 high-end gaming laptop with Intel i9, RTX 4080, 32GB RAM",
+  "attributes": {
+   "CPU": "Intel Core i9-13900HX",
+   "RAM": "32GB",
+   "Storage": "1TB SSD",
+   "GPU": "NVIDIA RTX 4080",
+   "Display": "17.3\" QHD 165Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "HP 250 G9",
+  "sku": "LAP-HP-250G9-I3",
+  "price": 449.99,
+  "stock": 25,
+  "category": "Laptop",
+  "brand": "HP",
+  "description": "HP 250 G9 budget laptop with Intel i3, 8GB RAM, perfect for office work",
+  "attributes": {
+   "CPU": "Intel Core i3-1215U",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel UHD",
+   "Display": "15.6\" FHD",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Dell XPS 15 9530",
+  "sku": "LAP-DELL-XPS15-I7",
+  "price": 1799.99,
+  "stock": 6,
+  "category": "Laptop",
+  "brand": "Dell",
+  "description": "Dell XPS 15 premium ultrabook with Intel i7, RTX 4050, stunning OLED display",
+  "attributes": {
+   "CPU": "Intel Core i7-13700H",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "NVIDIA RTX 4050",
+   "Display": "15.6\" OLED 3.5K",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Dell Latitude 5540",
+  "sku": "LAP-DELL-LAT5540-I5",
+  "price": 899.99,
+  "stock": 14,
+  "category": "Laptop",
+  "brand": "Dell",
+  "description": "Dell Latitude 5540 business laptop with Intel i5, 16GB RAM, 256GB SSD",
+  "attributes": {
+   "CPU": "Intel Core i5-1345U",
+   "RAM": "16GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "15.6\" FHD",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Dell G15 Gaming",
+  "sku": "LAP-DELL-G15-I7-RTX",
+  "price": 1199.99,
+  "stock": 10,
+  "category": "Laptop",
+  "brand": "Dell",
+  "description": "Dell G15 gaming laptop with Intel i7, RTX 4060, 16GB RAM, 165Hz display",
+  "attributes": {
+   "CPU": "Intel Core i7-13650HX",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "NVIDIA RTX 4060",
+   "Display": "15.6\" FHD 165Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Dell Inspiron 15 3520",
+  "sku": "LAP-DELL-INS15-I5",
+  "price": 549.99,
+  "stock": 22,
+  "category": "Laptop",
+  "brand": "Dell",
+  "description": "Dell Inspiron 15 everyday laptop with Intel i5, 8GB RAM, 512GB SSD",
+  "attributes": {
+   "CPU": "Intel Core i5-1235U",
+   "RAM": "8GB",
+   "Storage": "512GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "15.6\" FHD",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Dell Alienware m18",
+  "sku": "LAP-DELL-ALW-M18-I9",
+  "price": 2999.99,
+  "stock": 3,
+  "category": "Laptop",
+  "brand": "Dell",
+  "description": "Dell Alienware m18 flagship gaming laptop with Intel i9, RTX 4090, ultimate performance",
+  "attributes": {
+   "CPU": "Intel Core i9-13980HX",
+   "RAM": "32GB",
+   "Storage": "1TB SSD",
+   "GPU": "NVIDIA RTX 4090",
+   "Display": "18\" QHD+ 165Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "ASUS ROG Strix G16",
+  "sku": "LAP-ASUS-ROG-G16-I7",
+  "price": 1499.99,
+  "stock": 7,
+  "category": "Laptop",
+  "brand": "ASUS",
+  "description": "ASUS ROG Strix G16 gaming laptop with Intel i7, RTX 4060, RGB keyboard",
+  "attributes": {
+   "CPU": "Intel Core i7-13650HX",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "NVIDIA RTX 4060",
+   "Display": "16\" FHD 165Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "ASUS TUF Gaming A15",
+  "sku": "LAP-ASUS-TUF-A15-R7",
+  "price": 999.99,
+  "stock": 12,
+  "category": "Laptop",
+  "brand": "ASUS",
+  "description": "ASUS TUF Gaming A15 durable gaming laptop with AMD Ryzen 7, RTX 4050",
+  "attributes": {
+   "CPU": "AMD Ryzen 7 7735HS",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "NVIDIA RTX 4050",
+   "Display": "15.6\" FHD 144Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "ASUS ZenBook 14 OLED",
+  "sku": "LAP-ASUS-ZEN14-I7",
+  "price": 1199.99,
+  "stock": 9,
+  "category": "Laptop",
+  "brand": "ASUS",
+  "description": "ASUS ZenBook 14 OLED ultrabook with Intel i7, stunning OLED display, lightweight",
+  "attributes": {
+   "CPU": "Intel Core i7-1360P",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "Intel Iris Xe",
+   "Display": "14\" 2.8K OLED",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "ASUS VivoBook 15",
+  "sku": "LAP-ASUS-VIVO15-R5",
+  "price": 599.99,
+  "stock": 20,
+  "category": "Laptop",
+  "brand": "ASUS",
+  "description": "ASUS VivoBook 15 everyday laptop with AMD Ryzen 5, 8GB RAM, good value",
+  "attributes": {
+   "CPU": "AMD Ryzen 5 5625U",
+   "RAM": "8GB",
+   "Storage": "512GB SSD",
+   "GPU": "AMD Radeon",
+   "Display": "15.6\" FHD",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "ASUS ROG Zephyrus G14",
+  "sku": "LAP-ASUS-ZEPH-G14-R9",
+  "price": 1799.99,
+  "stock": 5,
+  "category": "Laptop",
+  "brand": "ASUS",
+  "description": "ASUS ROG Zephyrus G14 compact gaming laptop with AMD Ryzen 9, RTX 4060",
+  "attributes": {
+   "CPU": "AMD Ryzen 9 7940HS",
+   "RAM": "16GB",
+   "Storage": "1TB SSD",
+   "GPU": "NVIDIA RTX 4060",
+   "Display": "14\" QHD+ 165Hz",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "MacBook Air M2",
+  "sku": "LAP-APPLE-MBA-M2",
+  "price": 1199.99,
+  "stock": 15,
+  "category": "Laptop",
+  "brand": "Apple",
+  "description": "MacBook Air M2 ultralight laptop with Apple Silicon, all-day battery life",
+  "attributes": {
+   "CPU": "Apple M2",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Apple M2 GPU",
+   "Display": "13.6\" Liquid Retina",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "MacBook Air M3",
+  "sku": "LAP-APPLE-MBA-M3",
+  "price": 1299.99,
+  "stock": 10,
+  "category": "Laptop",
+  "brand": "Apple",
+  "description": "MacBook Air M3 latest ultrabook with Apple M3 chip, incredible performance",
+  "attributes": {
+   "CPU": "Apple M3",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Apple M3 GPU",
+   "Display": "13.6\" Liquid Retina",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "MacBook Pro 14 M3 Pro",
+  "sku": "LAP-APPLE-MBP14-M3P",
+  "price": 1999.99,
+  "stock": 6,
+  "category": "Laptop",
+  "brand": "Apple",
+  "description": "MacBook Pro 14 with M3 Pro chip, professional-grade performance",
+  "attributes": {
+   "CPU": "Apple M3 Pro",
+   "RAM": "18GB",
+   "Storage": "512GB SSD",
+   "GPU": "Apple M3 Pro GPU",
+   "Display": "14.2\" Liquid Retina XDR",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "MacBook Pro 16 M3 Max",
+  "sku": "LAP-APPLE-MBP16-M3M",
+  "price": 3499.99,
+  "stock": 3,
+  "category": "Laptop",
+  "brand": "Apple",
+  "description": "MacBook Pro 16 with M3 Max, ultimate performance for professionals",
+  "attributes": {
+   "CPU": "Apple M3 Max",
+   "RAM": "36GB",
+   "Storage": "1TB SSD",
+   "GPU": "Apple M3 Max GPU",
+   "Display": "16.2\" Liquid Retina XDR",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Lenovo ThinkPad T480 (Refurbished)",
+  "sku": "LAP-LEN-T480-REF-I5",
+  "price": 349.99,
+  "stock": 15,
+  "category": "Laptop",
+  "brand": "Lenovo",
+  "description": "Refurbished Lenovo ThinkPad T480 with Intel i5, 16GB RAM, 1 year warranty",
+  "attributes": {
+   "CPU": "Intel Core i5-8350U",
+   "RAM": "16GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel UHD 620",
+   "Display": "14\" FHD",
+   "Condition": "Refurbished",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "HP EliteBook 840 G5 (Refurbished)",
+  "sku": "LAP-HP-EB840G5-REF-I5",
+  "price": 299.99,
+  "stock": 20,
+  "category": "Laptop",
+  "brand": "HP",
+  "description": "Refurbished HP EliteBook 840 G5 business laptop with 1 year warranty",
+  "attributes": {
+   "CPU": "Intel Core i5-8350U",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel UHD 620",
+   "Display": "14\" FHD",
+   "Condition": "Refurbished",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Dell Latitude 5490 (Refurbished)",
+  "sku": "LAP-DELL-LAT5490-REF",
+  "price": 329.99,
+  "stock": 12,
+  "category": "Laptop",
+  "brand": "Dell",
+  "description": "Refurbished Dell Latitude 5490 with 16GB RAM, 512GB SSD, 1 year warranty",
+  "attributes": {
+   "CPU": "Intel Core i5-8350U",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "Intel UHD 620",
+   "Display": "14\" FHD",
+   "Condition": "Refurbished",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "MacBook Pro 13 2020 M1 (Refurbished)",
+  "sku": "LAP-APPLE-MBP13-M1-REF",
+  "price": 799.99,
+  "stock": 8,
+  "category": "Laptop",
+  "brand": "Apple",
+  "description": "Refurbished MacBook Pro 13 with M1 chip, excellent condition, 1 year warranty",
+  "attributes": {
+   "CPU": "Apple M1",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Apple M1 GPU",
+   "Display": "13.3\" Retina",
+   "Condition": "Refurbished",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Custom Gaming PC RTX 4070",
+  "sku": "PC-GAME-RTX4070-I7",
+  "price": 1599.99,
+  "stock": 5,
+  "category": "Desktop",
+  "brand": "Custom",
+  "description": "Custom gaming PC with Intel i7, RTX 4070, 32GB RAM, ready for 4K gaming",
+  "attributes": {
+   "CPU": "Intel Core i7-13700F",
+   "RAM": "32GB",
+   "Storage": "1TB SSD",
+   "GPU": "NVIDIA RTX 4070",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Custom Gaming PC RTX 4080",
+  "sku": "PC-GAME-RTX4080-I9",
+  "price": 2499.99,
+  "stock": 3,
+  "category": "Desktop",
+  "brand": "Custom",
+  "description": "High-end custom gaming PC with Intel i9, RTX 4080, 64GB RAM",
+  "attributes": {
+   "CPU": "Intel Core i9-13900K",
+   "RAM": "64GB",
+   "Storage": "2TB SSD",
+   "GPU": "NVIDIA RTX 4080",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Office PC Pro",
+  "sku": "PC-OFFICE-PRO-I5",
+  "price": 599.99,
+  "stock": 15,
+  "category": "Desktop",
+  "brand": "Custom",
+  "description": "Office desktop PC with Intel i5, 16GB RAM, 512GB SSD, perfect for business",
+  "attributes": {
+   "CPU": "Intel Core i5-13400",
+   "RAM": "16GB",
+   "Storage": "512GB SSD",
+   "GPU": "Intel UHD 730",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Budget Office PC",
+  "sku": "PC-OFFICE-BUDGET-I3",
+  "price": 399.99,
+  "stock": 20,
+  "category": "Desktop",
+  "brand": "Custom",
+  "description": "Budget office PC with Intel i3, 8GB RAM, great value for basic tasks",
+  "attributes": {
+   "CPU": "Intel Core i3-12100",
+   "RAM": "8GB",
+   "Storage": "256GB SSD",
+   "GPU": "Intel UHD 730",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "AMD Ryzen Gaming PC",
+  "sku": "PC-GAME-RX7800-R7",
+  "price": 1399.99,
+  "stock": 6,
+  "category": "Desktop",
+  "brand": "Custom",
+  "description": "AMD gaming PC with Ryzen 7, RX 7800 XT, 32GB RAM, great for 1440p gaming",
+  "attributes": {
+   "CPU": "AMD Ryzen 7 7700X",
+   "RAM": "32GB",
+   "Storage": "1TB SSD",
+   "GPU": "AMD RX 7800 XT",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "NVIDIA GeForce RTX 4090",
+  "sku": "GPU-NVIDIA-RTX4090",
+  "price": 1599.99,
+  "stock": 4,
+  "category": "GPU",
+  "brand": "NVIDIA",
+  "description": "NVIDIA RTX 4090 flagship graphics card, 24GB GDDR6X, ultimate gaming performance",
+  "attributes": {
+   "GPU": "RTX 4090 24GB GDDR6X",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "NVIDIA GeForce RTX 4080 Super",
+  "sku": "GPU-NVIDIA-RTX4080S",
+  "price": 999.99,
+  "stock": 6,
+  "category": "GPU",
+  "brand": "NVIDIA",
+  "description": "NVIDIA RTX 4080 Super graphics card, 16GB, excellent 4K gaming",
+  "attributes": {
+   "GPU": "RTX 4080 Super 16GB GDDR6X",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "NVIDIA GeForce RTX 4070 Ti Super",
+  "sku": "GPU-NVIDIA-RTX4070TIS",
+  "price": 799.99,
+  "stock": 10,
+  "category": "GPU",
+  "brand": "NVIDIA",
+  "description": "NVIDIA RTX 4070 Ti Super, 16GB, great for 1440p and 4K gaming",
+  "attributes": {
+   "GPU": "RTX 4070 Ti Super 16GB GDDR6X",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "NVIDIA GeForce RTX 4070",
+  "sku": "GPU-NVIDIA-RTX4070",
+  "price": 599.99,
+  "stock": 12,
+  "category": "GPU",
+  "brand": "NVIDIA",
+  "description": "NVIDIA RTX 4070 graphics card, 12GB, solid 1440p gaming performance",
+  "attributes": {
+   "GPU": "RTX 4070 12GB GDDR6X",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "NVIDIA GeForce RTX 4060 Ti",
+  "sku": "GPU-NVIDIA-RTX4060TI",
+  "price": 449.99,
+  "stock": 15,
+  "category": "GPU",
+  "brand": "NVIDIA",
+  "description": "NVIDIA RTX 4060 Ti, 8GB, excellent 1080p and good 1440p gaming",
+  "attributes": {
+   "GPU": "RTX 4060 Ti 8GB GDDR6",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "NVIDIA GeForce RTX 4060",
+  "sku": "GPU-NVIDIA-RTX4060",
+  "price": 299.99,
+  "stock": 20,
+  "category": "GPU",
+  "brand": "NVIDIA",
+  "description": "NVIDIA RTX 4060, 8GB, great budget ray tracing card for 1080p",
+  "attributes": {
+   "GPU": "RTX 4060 8GB GDDR6",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "AMD Radeon RX 7900 XTX",
+  "sku": "GPU-AMD-RX7900XTX",
+  "price": 949.99,
+  "stock": 5,
+  "category": "GPU",
+  "brand": "AMD",
+  "description": "AMD RX 7900 XTX, 24GB, flagship AMD gaming card",
+  "attributes": {
+   "GPU": "RX 7900 XTX 24GB GDDR6",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "AMD Radeon RX 7800 XT",
+  "sku": "GPU-AMD-RX7800XT",
+  "price": 499.99,
+  "stock": 8,
+  "category": "GPU",
+  "brand": "AMD",
+  "description": "AMD RX 7800 XT, 16GB, excellent 1440p gaming performance",
+  "attributes": {
+   "GPU": "RX 7800 XT 16GB GDDR6",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "AMD Radeon RX 7600",
+  "sku": "GPU-AMD-RX7600",
+  "price": 269.99,
+  "stock": 18,
+  "category": "GPU",
+  "brand": "AMD",
+  "description": "AMD RX 7600, 8GB, budget-friendly 1080p gaming card",
+  "attributes": {
+   "GPU": "RX 7600 8GB GDDR6",
+   "Condition": "New",
+   "Garanci": "Po"
+  }
+ },
+ {
+  "name": "Intel Core i9-14900K",
+  "sku": "CPU-INTEL-I9-14900K",
+  "price": 589.99,
+  "stock": 8,
+  "category": "CPU",
+  "brand": "Intel",
+  "description": "Intel Core i9-14900K, 24 cores, 5.8GHz boost, flagship desktop processor",
+  "attributes": {
+   "CPU": "Intel Core i9-14900K"
+  }
+ },
+ {
+  "name": "Intel Core i7-14700K",
+  "sku": "CPU-INTEL-I7-14700K",
+  "price": 409.99,
+  "stock": 12,
+  "category": "CPU",
+  "brand": "Intel",
+  "description": "Intel Core i7-14700K, 20 cores, 5.6GHz boost, excellent for gaming and productivity",
+  "attributes": {
+   "CPU": "Intel Core i7-14700K"
+  }
+ },
+ {
+  "name": "Intel Core i5-14600K",
+  "sku": "CPU-INTEL-I5-14600K",
+  "price": 319.99,
+  "stock": 15,
+  "category": "CPU",
+  "brand": "Intel",
+  "description": "Intel Core i5-14600K, 14 cores, 5.3GHz boost, best value gaming CPU",
+  "attributes": {
+   "CPU": "Intel Core i5-14600K"
+  }
+ },
+ {
+  "name": "Intel Core i5-13400F",
+  "sku": "CPU-INTEL-I5-13400F",
+  "price": 199.99,
+  "stock": 20,
+  "category": "CPU",
+  "brand": "Intel",
+  "description": "Intel Core i5-13400F, 10 cores, budget gaming CPU, no integrated graphics",
+  "attributes": {
+   "CPU": "Intel Core i5-13400F"
+  }
+ },
+ {
+  "name": "AMD Ryzen 9 7950X3D",
+  "sku": "CPU-AMD-R9-7950X3D",
+  "price": 699.99,
+  "stock": 5,
+  "category": "CPU",
+  "brand": "AMD",
+  "description": "AMD Ryzen 9 7950X3D, 16 cores, 3D V-Cache, ultimate gaming performance",
+  "attributes": {
+   "CPU": "AMD Ryzen 9 7950X3D"
+  }
+ },
+ {
+  "name": "AMD Ryzen 7 7800X3D",
+  "sku": "CPU-AMD-R7-7800X3D",
+  "price": 449.99,
+  "stock": 8,
+  "category": "CPU",
+  "brand": "AMD",
+  "description": "AMD Ryzen 7 7800X3D, 8 cores, 3D V-Cache, best gaming CPU overall",
+  "attributes": {
+   "CPU": "AMD Ryzen 7 7800X3D"
+  }
+ },
+ {
+  "name": "AMD Ryzen 5 7600X",
+  "sku": "CPU-AMD-R5-7600X",
+  "price": 229.99,
+  "stock": 18,
+  "category": "CPU",
+  "brand": "AMD",
+  "description": "AMD Ryzen 5 7600X, 6 cores, excellent budget gaming processor",
+  "attributes": {
+   "CPU": "AMD Ryzen 5 7600X"
+  }
+ },
+ {
+  "name": "AMD Ryzen 5 5600X",
+  "sku": "CPU-AMD-R5-5600X",
+  "price": 149.99,
+  "stock": 25,
+  "category": "CPU",
+  "brand": "AMD",
+  "description": "AMD Ryzen 5 5600X, 6 cores, great value for AM4 platform",
+  "attributes": {
+   "CPU": "AMD Ryzen 5 5600X"
+  }
+ },
+ {
+  "name": "Corsair Vengeance DDR5 32GB (2x16GB)",
+  "sku": "RAM-COR-DDR5-32GB",
+  "price": 129.99,
+  "stock": 25,
+  "category": "RAM",
+  "brand": "Corsair",
+  "description": "Corsair Vengeance DDR5 32GB kit (2x16GB), 5600MHz, for latest Intel and AMD",
+  "attributes": {
+   "RAM": "32GB DDR5 5600MHz"
+  }
+ },
+ {
+  "name": "Corsair Vengeance DDR5 64GB (2x32GB)",
+  "sku": "RAM-COR-DDR5-64GB",
+  "price": 229.99,
+  "stock": 12,
+  "category": "RAM",
+  "brand": "Corsair",
+  "description": "Corsair Vengeance DDR5 64GB kit (2x32GB), 5600MHz, for content creators",
+  "attributes": {
+   "RAM": "64GB DDR5 5600MHz"
+  }
+ },
+ {
+  "name": "G.Skill Trident Z5 RGB DDR5 32GB",
+  "sku": "RAM-GSKILL-DDR5-32RGB",
+  "price": 149.99,
+  "stock": 18,
+  "category": "RAM",
+  "brand": "G.Skill",
+  "description": "G.Skill Trident Z5 RGB 32GB (2x16GB), DDR5 6000MHz, RGB lighting",
+  "attributes": {
+   "RAM": "32GB DDR5 6000MHz"
+  }
+ },
+ {
+  "name": "Kingston Fury Beast DDR4 32GB",
+  "sku": "RAM-KING-DDR4-32GB",
+  "price": 79.99,
+  "stock": 30,
+  "category": "RAM",
+  "brand": "Kingston",
+  "description": "Kingston Fury Beast 32GB (2x16GB), DDR4 3200MHz, for older platforms",
+  "attributes": {
+   "RAM": "32GB DDR4 3200MHz"
+  }
+ },
+ {
+  "name": "Kingston Fury Beast DDR4 16GB",
+  "sku": "RAM-KING-DDR4-16GB",
+  "price": 44.99,
+  "stock": 40,
+  "category": "RAM",
+  "brand": "Kingston",
+  "description": "Kingston Fury Beast 16GB (2x8GB), DDR4 3200MHz, budget gaming RAM",
+  "attributes": {
+   "RAM": "16GB DDR4 3200MHz"
+  }
+ },
+ {
+  "name": "Crucial DDR4 8GB",
+  "sku": "RAM-CRUCIAL-DDR4-8GB",
+  "price": 24.99,
+  "stock": 50,
+  "category": "RAM",
+  "brand": "Crucial",
+  "description": "Crucial 8GB DDR4 2666MHz single stick, for upgrades",
+  "attributes": {
+   "RAM": "8GB DDR4 2666MHz"
+  }
+ },
+ {
+  "name": "Samsung 990 Pro 2TB NVMe",
+  "sku": "SSD-SAM-990PRO-2TB",
+  "price": 199.99,
+  "stock": 15,
+  "category": "Storage",
+  "brand": "Samsung",
+  "description": "Samsung 990 Pro 2TB NVMe SSD, PCIe 4.0, 7450MB/s read, top performance",
+  "attributes": {
+   "Storage": "2TB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "Samsung 990 Pro 1TB NVMe",
+  "sku": "SSD-SAM-990PRO-1TB",
+  "price": 109.99,
+  "stock": 25,
+  "category": "Storage",
+  "brand": "Samsung",
+  "description": "Samsung 990 Pro 1TB NVMe SSD, PCIe 4.0, excellent for gaming",
+  "attributes": {
+   "Storage": "1TB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "Samsung 870 EVO 1TB SATA",
+  "sku": "SSD-SAM-870EVO-1TB",
+  "price": 89.99,
+  "stock": 30,
+  "category": "Storage",
+  "brand": "Samsung",
+  "description": "Samsung 870 EVO 1TB SATA SSD, reliable storage upgrade",
+  "attributes": {
+   "Storage": "1TB SATA SSD"
+  }
+ },
+ {
+  "name": "WD Black SN850X 2TB NVMe",
+  "sku": "SSD-WD-SN850X-2TB",
+  "price": 179.99,
+  "stock": 12,
+  "category": "Storage",
+  "brand": "Western Digital",
+  "description": "WD Black SN850X 2TB NVMe, PCIe 4.0, 7300MB/s, gaming optimized",
+  "attributes": {
+   "Storage": "2TB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "WD Black SN850X 1TB NVMe",
+  "sku": "SSD-WD-SN850X-1TB",
+  "price": 99.99,
+  "stock": 20,
+  "category": "Storage",
+  "brand": "Western Digital",
+  "description": "WD Black SN850X 1TB NVMe, excellent for gaming and content creation",
+  "attributes": {
+   "Storage": "1TB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "Crucial P3 Plus 1TB NVMe",
+  "sku": "SSD-CRUCIAL-P3P-1TB",
+  "price": 69.99,
+  "stock": 35,
+  "category": "Storage",
+  "brand": "Crucial",
+  "description": "Crucial P3 Plus 1TB NVMe, budget PCIe 4.0 SSD",
+  "attributes": {
+   "Storage": "1TB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "Crucial P3 Plus 500GB NVMe",
+  "sku": "SSD-CRUCIAL-P3P-500GB",
+  "price": 44.99,
+  "stock": 40,
+  "category": "Storage",
+  "brand": "Crucial",
+  "description": "Crucial P3 Plus 500GB NVMe, affordable boot drive",
+  "attributes": {
+   "Storage": "500GB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "Kingston NV2 256GB NVMe",
+  "sku": "SSD-KING-NV2-256GB",
+  "price": 29.99,
+  "stock": 50,
+  "category": "Storage",
+  "brand": "Kingston",
+  "description": "Kingston NV2 256GB NVMe, entry-level SSD for budget builds",
+  "attributes": {
+   "Storage": "256GB NVMe PCIe 4.0"
+  }
+ },
+ {
+  "name": "LG 27GP850-B 27\" 165Hz",
+  "sku": "MON-LG-27GP850",
+  "price": 399.99,
+  "stock": 10,
+  "category": "Monitor",
+  "brand": "LG",
+  "description": "LG 27GP850-B gaming monitor, 27\" QHD 2560x1440, 165Hz, 1ms, G-Sync/FreeSync",
+  "attributes": {
+   "Display": "27\" QHD 165Hz IPS"
+  }
+ },
+ {
+  "name": "ASUS ROG Swift PG27AQN 27\" 360Hz",
+  "sku": "MON-ASUS-PG27AQN",
+  "price": 999.99,
+  "stock": 4,
+  "category": "Monitor",
+  "brand": "ASUS",
+  "description": "ASUS ROG Swift PG27AQN esports monitor, 27\" QHD, 360Hz, G-Sync, HDR600",
+  "attributes": {
+   "Display": "27\" QHD 360Hz IPS"
+  }
+ },
+ {
+  "name": "Dell S2722DGM 27\" 165Hz Curved",
+  "sku": "MON-DELL-S2722DGM",
+  "price": 279.99,
+  "stock": 15,
+  "category": "Monitor",
+  "brand": "Dell",
+  "description": "Dell S2722DGM curved gaming monitor, 27\" QHD, 165Hz, great contrast",
+  "attributes": {
+   "Display": "27\" QHD 165Hz VA Curved"
+  }
+ },
+ {
+  "name": "Samsung Odyssey G7 32\" 240Hz",
+  "sku": "MON-SAM-G7-32",
+  "price": 599.99,
+  "stock": 6,
+  "category": "Monitor",
+  "brand": "Samsung",
+  "description": "Samsung Odyssey G7 curved gaming monitor, 32\" QHD, 240Hz, 1000R curve",
+  "attributes": {
+   "Display": "32\" QHD 240Hz VA Curved"
+  }
+ },
+ {
+  "name": "BenQ EX2710Q 27\" 165Hz",
+  "sku": "MON-BENQ-EX2710Q",
+  "price": 349.99,
+  "stock": 12,
+  "category": "Monitor",
+  "brand": "BenQ",
+  "description": "BenQ MOBIUZ EX2710Q gaming monitor, 27\" QHD, 165Hz, HDRi technology",
+  "attributes": {
+   "Display": "27\" QHD 165Hz IPS"
+  }
+ },
+ {
+  "name": "AOC 24G2SP 24\" 165Hz",
+  "sku": "MON-AOC-24G2SP",
+  "price": 169.99,
+  "stock": 25,
+  "category": "Monitor",
+  "brand": "AOC",
+  "description": "AOC 24G2SP budget gaming monitor, 24\" FHD, 165Hz, excellent value",
+  "attributes": {
+   "Display": "24\" FHD 165Hz IPS"
+  }
+ },
+ {
+  "name": "LG 27UK850-W 27\" 4K",
+  "sku": "MON-LG-27UK850",
+  "price": 449.99,
+  "stock": 8,
+  "category": "Monitor",
+  "brand": "LG",
+  "description": "LG 27UK850-W productivity monitor, 27\" 4K UHD, USB-C, HDR10",
+  "attributes": {
+   "Display": "27\" 4K 60Hz IPS"
+  }
+ },
+ {
+  "name": "Dell P2422H 24\" FHD",
+  "sku": "MON-DELL-P2422H",
+  "price": 199.99,
+  "stock": 20,
+  "category": "Monitor",
+  "brand": "Dell",
+  "description": "Dell P2422H office monitor, 24\" FHD, ergonomic stand, USB hub",
+  "attributes": {
+   "Display": "24\" FHD 60Hz IPS"
+  }
+ },
+ {
+  "name": "Logitech G Pro X Keyboard",
+  "sku": "KEY-LOGI-GPROX",
+  "price": 149.99,
+  "stock": 20,
+  "category": "Peripherals",
+  "brand": "Logitech",
+  "description": "Logitech G Pro X mechanical keyboard, hot-swappable switches, RGB, TKL",
+  "attributes": {}
+ },
+ {
+  "name": "Razer BlackWidow V4 Pro",
+  "sku": "KEY-RAZER-BWV4P",
+  "price": 229.99,
+  "stock": 12,
+  "category": "Peripherals",
+  "brand": "Razer",
+  "description": "Razer BlackWidow V4 Pro mechanical keyboard, Green switches, RGB, media dial",
+  "attributes": {}
+ },
+ {
+  "name": "SteelSeries Apex Pro TKL",
+  "sku": "KEY-SS-APEXTKLP",
+  "price": 189.99,
+  "stock": 15,
+  "category": "Peripherals",
+  "brand": "SteelSeries",
+  "description": "SteelSeries Apex Pro TKL, adjustable actuation, OmniPoint 2.0 switches",
+  "attributes": {}
+ },
+ {
+  "name": "Keychron K8 Pro",
+  "sku": "KEY-KEYCH-K8PRO",
+  "price": 99.99,
+  "stock": 25,
+  "category": "Peripherals",
+  "brand": "Keychron",
+  "description": "Keychron K8 Pro wireless mechanical keyboard, hot-swap, Gateron switches",
+  "attributes": {}
+ },
+ {
+  "name": "HyperX Alloy Origins Core",
+  "sku": "KEY-HX-ALLOYOC",
+  "price": 79.99,
+  "stock": 30,
+  "category": "Peripherals",
+  "brand": "HyperX",
+  "description": "HyperX Alloy Origins Core TKL mechanical keyboard, Red switches, RGB",
+  "attributes": {}
+ },
+ {
+  "name": "Logitech G Pro X Superlight 2",
+  "sku": "MOUSE-LOGI-GPXSL2",
+  "price": 159.99,
+  "stock": 15,
+  "category": "Peripherals",
+  "brand": "Logitech",
+  "description": "Logitech G Pro X Superlight 2 wireless gaming mouse, 60g, HERO 2 sensor",
+  "attributes": {}
+ },
+ {
+  "name": "Razer DeathAdder V3 Pro",
+  "sku": "MOUSE-RAZER-DAV3P",
+  "price": 149.99,
+  "stock": 18,
+  "category": "Peripherals",
+  "brand": "Razer",
+  "description": "Razer DeathAdder V3 Pro wireless gaming mouse, 63g, Focus Pro sensor",
+  "attributes": {}
+ },
+ {
+  "name": "SteelSeries Prime Wireless",
+  "sku": "MOUSE-SS-PRIMEW",
+  "price": 129.99,
+  "stock": 20,
+  "category": "Peripherals",
+  "brand": "SteelSeries",
+  "description": "SteelSeries Prime Wireless gaming mouse, TrueMove Air sensor, 80g",
+  "attributes": {}
+ },
+ {
+  "name": "Logitech G502 X Plus",
+  "sku": "MOUSE-LOGI-G502XP",
+  "price": 159.99,
+  "stock": 12,
+  "category": "Peripherals",
+  "brand": "Logitech",
+  "description": "Logitech G502 X Plus wireless gaming mouse, LIGHTSPEED, HERO 25K sensor",
+  "attributes": {}
+ },
+ {
+  "name": "Razer Viper V2 Pro",
+  "sku": "MOUSE-RAZER-VV2P",
+  "price": 149.99,
+  "stock": 14,
+  "category": "Peripherals",
+  "brand": "Razer",
+  "description": "Razer Viper V2 Pro wireless gaming mouse, 58g, Focus Pro 30K sensor",
+  "attributes": {}
+ },
+ {
+  "name": "Logitech G305",
+  "sku": "MOUSE-LOGI-G305",
+  "price": 49.99,
+  "stock": 35,
+  "category": "Peripherals",
+  "brand": "Logitech",
+  "description": "Logitech G305 LIGHTSPEED wireless gaming mouse, budget-friendly, HERO sensor",
+  "attributes": {}
+ },
+ {
+  "name": "SteelSeries Arctis Nova Pro Wireless",
+  "sku": "HEAD-SS-ANOVAPW",
+  "price": 349.99,
+  "stock": 8,
+  "category": "Peripherals",
+  "brand": "SteelSeries",
+  "description": "SteelSeries Arctis Nova Pro Wireless headset, hi-res audio, ANC, dual battery",
+  "attributes": {}
+ },
+ {
+  "name": "Logitech G Pro X 2 Lightspeed",
+  "sku": "HEAD-LOGI-GPROX2",
+  "price": 249.99,
+  "stock": 12,
+  "category": "Peripherals",
+  "brand": "Logitech",
+  "description": "Logitech G Pro X 2 Lightspeed wireless gaming headset, 50mm drivers, DTS",
+  "attributes": {}
+ },
+ {
+  "name": "Razer BlackShark V2 Pro",
+  "sku": "HEAD-RAZER-BSV2P",
+  "price": 179.99,
+  "stock": 15,
+  "category": "Peripherals",
+  "brand": "Razer",
+  "description": "Razer BlackShark V2 Pro wireless headset, THX Spatial Audio, 70h battery",
+  "attributes": {}
+ },
+ {
+  "name": "HyperX Cloud III Wireless",
+  "sku": "HEAD-HX-CLOUD3W",
+  "price": 169.99,
+  "stock": 18,
+  "category": "Peripherals",
+  "brand": "HyperX",
+  "description": "HyperX Cloud III Wireless gaming headset, DTS:X, 120h battery life",
+  "attributes": {}
+ },
+ {
+  "name": "SteelSeries Arctis 7+",
+  "sku": "HEAD-SS-ARCTIS7P",
+  "price": 149.99,
+  "stock": 20,
+  "category": "Peripherals",
+  "brand": "SteelSeries",
+  "description": "SteelSeries Arctis 7+ wireless headset, USB-C, 30h battery, comfortable",
+  "attributes": {}
+ },
+ {
+  "name": "Logitech G435",
+  "sku": "HEAD-LOGI-G435",
+  "price": 79.99,
+  "stock": 30,
+  "category": "Peripherals",
+  "brand": "Logitech",
+  "description": "Logitech G435 wireless gaming headset, lightweight, Bluetooth + LIGHTSPEED",
+  "attributes": {}
+ }
+]
