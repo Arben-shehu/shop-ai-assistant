@@ -9,5 +9,5 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except login, auth API, provider webhooks and static assets.
-  matcher: ["/((?!login|api/auth|api/webhooks|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!login|api/auth|api/webhooks|_next|favicon.ico).*)"],
 };
