@@ -87,14 +87,16 @@ async function main() {
   const operator = await prisma.user.findUnique({ where: { email: OPERATOR_EMAIL } });
 
   const channel =
-    (await prisma.channel.findFirst({ where: { organizationId: org.id, type: "WHATSAPP_OPENWA" } })) ??
+    (await prisma.channel.findFirst({ where: { organizationId: org.id, type: "WHATSAPP_OPENWA", externalId: "demo-session" } })) ??
     (await prisma.channel.create({
       data: {
         organizationId: org.id,
         type: "WHATSAPP_OPENWA",
-        name: "WhatsApp i dyqanit",
+        name: "Demo (pa lidhje)",
         externalId: "demo-session",
-        status: "CONNECTED",
+        // Fake session for demo data: inactive so the health monitor and outbox leave it alone.
+        status: "DISCONNECTED",
+        isActive: false,
       },
     }));
 
