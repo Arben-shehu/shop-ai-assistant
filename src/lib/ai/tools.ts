@@ -505,7 +505,7 @@ async function handoff(ctx: ToolContext, reason: string): Promise<ToolOutcome> {
   });
   await notify(ctx.orgId, {
     type: "HUMAN_NEEDED",
-    title: `${customer?.name ?? customer?.externalId ?? "A customer"} needs a human`,
+    title: `${customer?.name ?? (customer?.externalId.startsWith("web:") ? "Web visitor" : customer?.externalId) ?? "A customer"} needs a human`,
     body: reason,
     link: `/conversations/${ctx.conversationId}`,
   });
