@@ -6,6 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireOrg } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
+import { hasInventorySource } from "@/lib/inventory/source";
 import { productInputSchema, type ProductFieldErrors, type ProductInput } from "@/components/stock/product-schema";
 
 // Every action here is shop-admin only: requireOrg({ minRole: "admin" }) redirects operators to /unauthorized
@@ -17,10 +18,13 @@ export type ActionResult<T = object> =
   | { ok: false; error: string; fieldErrors?: ProductFieldErrors };
 
 const isUniqueViolation = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+// Shops with their own DB: products are a mirror of live reads; local edits would be overwritten or never searched.
+const EXTERNAL = { ok: false as const, error: "Inventari i këtij dyqani lexohet nga DB e tyre. Ndryshimet bëhen atje." };
 const SKU_TAKEN = "Ky SKU përdoret tashmë nga një produkt tjetër në dyqan.";
 
 export async function saveProduct(input: ProductInput): Promise<ActionResult<{ id: string }>> {
   const { orgId, user } = await requireOrg({ minRole: "admin" });
+  if (await hasInventorySource(orgId)) return EXTERNAL;
   const parsed = productInputSchema.safeParse(input);
   if (!parsed.success) {
     const flat = z.flattenError(parsed.error).fieldErrors as Record<string, string[] | undefined>;
@@ -69,6 +73,7 @@ const adjustInput = z.object({ productId: z.string().min(1).max(64), delta: z.nu
 /** Atomic +/- on stock; never goes below zero. */
 export async function adjustStock(input: z.input<typeof adjustInput>): Promise<ActionResult<{ stock: number }>> {
   const { orgId, user } = await requireOrg({ minRole: "admin" });
+  if (await hasInventorySource(orgId)) return EXTERNAL;
   const parsed = adjustInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Të dhëna të pavlefshme." };
   const { productId, delta } = parsed.data;
@@ -97,6 +102,7 @@ const activeInput = z.object({ productId: z.string().min(1).max(64), isActive: z
 
 export async function setProductActive(input: z.input<typeof activeInput>): Promise<ActionResult> {
   const { orgId, user } = await requireOrg({ minRole: "admin" });
+  if (await hasInventorySource(orgId)) return EXTERNAL;
   const parsed = activeInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Të dhëna të pavlefshme." };
   const { productId, isActive } = parsed.data;
@@ -123,6 +129,7 @@ const deleteInput = z.object({ productId: z.string().min(1).max(64) });
  */
 export async function deleteProduct(input: z.input<typeof deleteInput>): Promise<ActionResult<{ mode: "deleted" | "archived" }>> {
   const { orgId, user } = await requireOrg({ minRole: "admin" });
+  if (await hasInventorySource(orgId)) return EXTERNAL;
   const parsed = deleteInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Të dhëna të pavlefshme." };
   const { productId } = parsed.data;

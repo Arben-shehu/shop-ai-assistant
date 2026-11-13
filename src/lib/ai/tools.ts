@@ -8,6 +8,7 @@ import { publish } from "@/lib/events";
 import { logActivity } from "@/lib/activity";
 import { createOrder, MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "@/lib/orders";
 import { searchTermGroups, termVariants } from "@/lib/ai/search-terms";
+import { InventoryUnavailable, liveSearch, refreshProducts } from "@/lib/inventory/source";
 
 /**
  * Everything a tool may touch comes from here — never from model input. The model can only name products
@@ -195,6 +196,10 @@ function isToolName(name: string): name is ToolName {
   return Object.hasOwn(inputs, name);
 }
 
+const INVENTORY_DOWN =
+  "INVENTORY_UNAVAILABLE: the shop's stock system is not answering right now. Do not guess products, prices or stock; " +
+  "tell the customer to try again in a few minutes or offer to hand them to a colleague.";
+
 const ok = (data: unknown): ToolOutcome => ({ content: JSON.stringify(data), isError: false });
 const fail = (error: string, extra?: Record<string, unknown>): ToolOutcome => ({
   content: JSON.stringify({ error, ...extra }),
@@ -207,7 +212,13 @@ export async function runTool(name: string, rawInput: unknown, ctx: ToolContext)
   const parsed = inputs[name].safeParse(rawInput ?? {});
   if (!parsed.success) return fail(`Invalid input: ${z.prettifyError(parsed.error)}`);
   const run = handlers[name] as (ctx: ToolContext, input: unknown) => Promise<ToolOutcome>;
-  return run(ctx, parsed.data);
+  try {
+    return await run(ctx, parsed.data);
+  } catch (e) {
+    // The shop's own DB being down must not flip every chat to a human (failToHuman); let the model say so.
+    if (e instanceof InventoryUnavailable) return fail(INVENTORY_DOWN);
+    throw e;
+  }
 }
 
 type Input<K extends ToolName> = z.infer<(typeof inputs)[K]>;
@@ -278,6 +289,13 @@ async function searchProducts(ctx: ToolContext, input: Input<"search_products">)
   if (input.maxPrice !== undefined) base.push({ price: { lte: new Prisma.Decimal(Math.max(0, input.maxPrice)) } });
 
   const groups = searchTermGroups(input.query);
+  // Shops with their own DB: only rows read live in this call (mirrored into Product) may be returned.
+  const liveIds = await liveSearch(ctx.orgId, [
+    ...groups.flat(),
+    ...(input.category?.trim() ? termVariants(input.category) : []),
+    ...(input.brand?.trim() ? [input.brand.trim()] : []),
+  ]);
+  if (liveIds) base.push({ id: { in: liveIds } });
   const hasFilter = base.length > 2;
   const rank = (rows: ProductRow[]) => rows.sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0));
 
@@ -339,6 +357,7 @@ async function searchProducts(ctx: ToolContext, input: Input<"search_products">)
 }
 
 async function getProduct(ctx: ToolContext, productId: string): Promise<ToolOutcome> {
+  await refreshProducts(ctx.orgId, [productId]);
   const p = await prisma.product.findFirst({
     where: { id: productId, organizationId: ctx.orgId, isActive: true },
     select: productSelect,
@@ -402,6 +421,12 @@ async function placeOrder(ctx: ToolContext, input: Input<"create_order">): Promi
   if (!customer?.name) {
     return fail("The customer's name is unknown. Ask for their name, save it with save_customer_details, then create the order.");
   }
+  // Web visitors cannot be reached after they close the tab: the shop needs a phone number to confirm delivery.
+  const conv = await prisma.conversation.findFirst({ where: { id: ctx.conversationId, organizationId: ctx.orgId }, select: { channel: { select: { type: true } }, customer: { select: { phone: true } } } });
+  if (conv?.channel.type === "WEB" && !conv.customer.phone) {
+    return fail("This customer wrote from the website chat. Ask for their phone number, save it with save_customer_details, then create the order.");
+  }
+  await refreshProducts(ctx.orgId, input.items.map((i) => i.productId));
   const result = await createOrder(ctx.orgId, {
     customerId: ctx.customerId,
     conversationId: ctx.conversationId,

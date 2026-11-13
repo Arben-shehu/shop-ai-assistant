@@ -14,13 +14,15 @@ import { SAMPLE_SUMMARY, StockSummary } from "@/components/stock/stock-summary";
 import { StockToolbar } from "@/components/stock/stock-toolbar";
 import { getShopSettings } from "@/lib/shop-settings";
 import { requireOrg } from "@/lib/session";
+import { hasInventorySource } from "@/lib/inventory/source";
 import { getProductFacets, getProductRows, getStockSummary, parseStockFilters, type StockFilters } from "./data";
 
 export const metadata = { title: "Magazina" };
 
 export default async function StockPage({ searchParams }: PageProps<"/stock">) {
   const { orgId, role, platformAdmin } = await requireOrg();
-  const canManage = platformAdmin || role !== "member";
+  const external = await hasInventorySource(orgId);
+  const canManage = !external && (platformAdmin || role !== "member");
   const sp = await searchParams;
   const filters = parseStockFilters(sp);
   const [{ currency }, facets] = await Promise.all([getShopSettings(orgId), getProductFacets(orgId)]);
@@ -31,7 +33,13 @@ export default async function StockPage({ searchParams }: PageProps<"/stock">) {
       <LiveRefresh types={["order"]} />
       <PageHeader
         title="Magazina"
-        description={canManage ? "Produktet, çmimet dhe stoku që asistenti u ofron klientëve." : "Produktet dhe stoku (vetëm për lexim)."}
+        description={
+          external
+            ? "Inventari lexohet live nga DB e dyqanit (vetëm lexim). Këtu shfaqen produktet që asistenti ka parë deri tani."
+            : canManage
+              ? "Produktet, çmimet dhe stoku që asistenti u ofron klientëve."
+              : "Produktet dhe stoku (vetëm për lexim)."
+        }
         actions={canManage && <NewProductButton categories={facets.categories} brands={facets.brands} />}
       />
       <SkeletonSuspense id="stock-summary" label="Duke ngarkuar përmbledhjen" skeleton={<StockSummary data={SAMPLE_SUMMARY} />}>
