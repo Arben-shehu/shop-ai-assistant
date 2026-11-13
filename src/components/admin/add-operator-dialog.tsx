@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addOperator } from "@/app/(app)/operators/actions";
 
-export function AddOperatorDialog() {
+export function AddOperatorDialog({ allowExisting = false }: { allowExisting?: boolean }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<"new" | "existing">("new");
@@ -59,10 +59,12 @@ export function AddOperatorDialog() {
         <form onSubmit={onSubmit}>
           <FieldGroup>
             <Tabs value={mode} onValueChange={(v) => setMode(v as "new" | "existing")}>
-              <TabsList className="w-full">
-                <TabsTrigger value="new">Llogari e re</TabsTrigger>
-                <TabsTrigger value="existing">Përdorues ekzistues</TabsTrigger>
-              </TabsList>
+              {allowExisting && (
+                <TabsList className="w-full">
+                  <TabsTrigger value="new">Llogari e re</TabsTrigger>
+                  <TabsTrigger value="existing">Përdorues ekzistues</TabsTrigger>
+                </TabsList>
+              )}
               <TabsContent value="new" className="pt-3">
                 <FieldGroup>
                   <Field>

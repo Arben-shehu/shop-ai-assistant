@@ -21,10 +21,13 @@ const addSchema = z.object({
 });
 
 export async function addOperator(input: z.input<typeof addSchema>): Promise<ActionResult> {
-  const { orgId, user: actor } = await requireOrg({ minRole: "admin" });
+  const { orgId, user: actor, platformAdmin } = await requireOrg({ minRole: "admin" });
   const parsed = addSchema.safeParse(input);
   if (!parsed.success) return zodError(parsed.error);
   const { role, user } = parsed.data;
+  // Attaching an existing account would let a shop pull in (and probe for) any user on the platform.
+  if (user.mode === "existing" && !platformAdmin)
+    return { ok: false, error: "Vetëm administratori i platformës mund të shtojë një përdorues ekzistues." };
 
   let userId: string;
   let created = false;

@@ -33,7 +33,7 @@ export default async function OperatorsPage() {
       <PageHeader
         title="Operatorët"
         description="Kush ka akses në këtë dyqan. Operatorët u përgjigjen klientëve; administratorët menaxhojnë edhe cilësimet."
-        actions={<AddOperatorDialog />}
+        actions={<AddOperatorDialog allowExisting={platformAdmin} />}
       />
       <OperatorsTable rows={rows} />
     </>
