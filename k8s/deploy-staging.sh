@@ -4,7 +4,8 @@
 #   k8s/deploy-staging.sh                  # build, push (app + OpenWA), update secret, apply, roll out
 #   k8s/deploy-staging.sh --skip-openwa    # same, but do not build/push the OpenWA image (big, rarely changes);
 #                                          # it must already be in the VPS registry (checked)
-#   k8s/deploy-staging.sh --dry-run        # print the steps only (no docker, no ssh, no secret values)
+#   k8s/deploy-staging.sh --dry-run        # print the steps only (no build/push/ssh, no secret values; only a
+#                                          # read-only `docker image inspect` of the local OpenWA image)
 #
 # Needs: docker, git, ssh, curl; env STAGING_SSH_USER, STAGING_SSH_HOST, STAGING_SSH_KEY;
 #        k8s/.env.staging (gitignored, template k8s/staging.env.example).
